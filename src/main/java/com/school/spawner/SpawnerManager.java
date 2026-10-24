@@ -21,7 +21,9 @@ public class SpawnerManager {
     private final Map<String, SpawnerData> spawners = new ConcurrentHashMap<>();
     private final File dataFile;
     private final NamespacedKey keyMob, keyLevel, keyOwner, keyOwnerName;
-    private BukkitTask task;
+    private BukkitTask tickTask;
+    private BukkitTask saveTask;
+    private boolean needsSave = false;
 
     public SpawnerManager(SchoolSpawner plugin) {
         this.plugin = plugin;
@@ -44,11 +46,20 @@ public class SpawnerManager {
 
     public void startTask() {
         long interval = Math.max(1, plugin.getConfig().getLong("settings.generate-interval", 3)) * 20L;
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, interval, interval);
+        tickTask = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, interval, interval);
+
+        long saveInterval = Math.max(10, plugin.getConfig().getLong("settings.auto-save-interval", 60)) * 20L;
+        saveTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+            if (needsSave) {
+                saveToDisk();
+                needsSave = false;
+            }
+        }, saveInterval, saveInterval);
     }
 
     public void stopTask() {
-        if (task != null) task.cancel();
+        if (tickTask != null) tickTask.cancel();
+        if (saveTask != null) saveTask.cancel();
     }
 
     private void tick() {
@@ -79,23 +90,28 @@ public class SpawnerManager {
         return plugin.getConfig().getDouble("permission-multipliers." + best, 1.0);
     }
 
+    // Tạo Item Lồng từ config
     public ItemStack createSpawnerItem(EntityType type, int level, UUID owner, String ownerName) {
         ItemStack item = new ItemStack(Material.SPAWNER);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return item;
 
-        String name = "&#FF55FF✦ Lồng " + pretty(type) + " &#AAAAAA[Cấp " + level + "]";
+        String name = plugin.getConfig().getString("spawner-item.name", "&#FF55FF✦ Lồng %mob% &#AAAAAA[Cấp %level%]")
+                .replace("%mob%", pretty(type))
+                .replace("%level%", String.valueOf(level));
         meta.displayName(TextUtil.color(name));
-        meta.lore(Arrays.asList(
-                TextUtil.color("&#55FFFF▸ Thực thể: &f" + pretty(type)),
-                TextUtil.color("&#55FFFF▸ Cấp: &#FFAA00" + level),
-                TextUtil.color("&#55FFFF▸ Sinh tiền: &#55FF55" + String.format("%.1f", baseWithLevel(type, level)) + "$ &7/ 3s"),
-                TextUtil.color("&#55FFFF▸ Chủ sở hữu: &#FFAA00" + (ownerName == null ? "Server" : ownerName)),
-                TextUtil.color("&8"),
-                TextUtil.color("&#FFFF55Shift + Chuột phải &7để gộp"),
-                TextUtil.color("&#55FF55Chuột phải &7để mở menu"),
-                TextUtil.color("&#FF5555Đập để thu hồi")
-        ));
+
+        List<String> loreRaw = plugin.getConfig().getStringList("spawner-item.lore");
+        List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+        for (String line : loreRaw) {
+            lore.add(TextUtil.color(line
+                    .replace("%mob%", pretty(type))
+                    .replace("%level%", String.valueOf(level))
+                    .replace("%rate%", String.format("%.1f", baseWithLevel(type, level)))
+                    .replace("%owner%", ownerName == null ? "Server" : ownerName)
+            ));
+        }
+        meta.lore(lore);
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
         pdc.set(keyMob, PersistentDataType.STRING, type.name());
@@ -149,19 +165,21 @@ public class SpawnerManager {
 
     public SpawnerData getAt(Location loc) { return spawners.get(locKey(loc)); }
     
+    // Đánh dấu cần lưu thay vì lưu ngay lập tức để tránh lag
     public void put(SpawnerData data) {
         spawners.put(locKey(data.location), data);
-        saveAll();
+        needsSave = true;
     }
 
     public void remove(Location loc) {
         spawners.remove(locKey(loc));
-        saveAll();
+        needsSave = true;
     }
 
     public Collection<SpawnerData> all() { return spawners.values(); }
 
-    public void saveAll() {
+    // Hàm lưu file vật lý (chạy Async)
+    public void saveToDisk() {
         YamlConfiguration yml = new YamlConfiguration();
         for (Map.Entry<String, SpawnerData> e : spawners.entrySet()) {
             SpawnerData d = e.getValue();
@@ -211,9 +229,9 @@ public class SpawnerManager {
     }
 
     public void reload() {
-        saveAll();
-        loadAll();
         stopTask();
+        saveToDisk(); // Lưu trước khi reload
+        loadAll();
         startTask();
     }
 }

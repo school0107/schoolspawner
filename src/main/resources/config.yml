@@ -5,13 +5,13 @@ settings:
   max-level: 100
   level-multiplier: 1.0
   owner-only-gui: true
-  # Tỷ lệ rơi lồng cơ bản (sẽ bị ghi đè bởi permission spawnerdrop.1 -> 4)
   kill-drop-chance: 0.5
-  # Lệnh fallback nếu không có Vault (dùng %player% và %amount%)
   fallback-money-command: ""
+  # Tối ưu: Tự động lưu dữ liệu lồng mỗi X giây (tính bằng giây)
+  auto-save-interval: 60
 
 messages:
-  prefix: "&#FFAA00[&#FF55FF✦ SchoolSpawner &#FFAA00] &r"
+  prefix: ""
   no-permission: "&#FF5555✖ Bạn không có quyền sử dụng lệnh này!"
   player-only: "&#FF5555✖ Chỉ dành cho người chơi!"
   spawner-broken: "&#55FF55✔ Bạn đã thu hồi lồng &#FFAA00%mob% &#55FF55(Cấp %level%)"
@@ -26,42 +26,48 @@ messages:
   no-economy: "&#FF5555✖ Server chưa cài đặt Vault/ Economy để nhận tiền!"
   drop-spawner: "&#FF55FF✦ Bạn nhặt được lồng &#FFFF55%mob% &#FF55FFtừ quái vật!"
 
-# ══════════════════════════════════════════════
-# CẤU HÌNH GUI (Menu 27 ô)
-# ══════════════════════════════════════════════
+# Cấu hình Item Lồng (Khi cầm trên tay)
+spawner-item:
+  name: "&#FF55FF✦ Lồng %mob% &#AAAAAA[Cấp %level%]"
+  lore:
+    - "&#55FFFF▸ Thực thể: &f%mob%"
+    - "&#55FFFF▸ Cấp: &#FFAA00%level%"
+    - "&#55FFFF▸ Sinh tiền: &#55FF55%rate%$ &7/ 3s"
+    - "&#55FFFF▸ Chủ sở hữu: &#FFAA00%owner%"
+    - "&8"
+    - "&#FFFF55Shift + Chuột phải &7để gộp"
+    - "&#55FF55Chuột phải &7để mở menu"
+    - "&#FF5555Đập để thu hồi"
+
 gui:
-  # Tiêu đề menu
   title: "&#FF55FF✦ &fLồng %mob% &#AAAAAA[Cấp %level%]"
-  # Item đại diện cho ô Nhận Tiền
   money-item: "GOLD_INGOT"
-  # Item đại diện cho ô Thông Tin
   info-item: "BOOK"
-  # Vị trí các ô (từ 0 đến 26)
   money-slot: 11
   info-slot: 15
-  # Bật/tắt kính trang trí (nếu bật, các ô trống sẽ có kính)
   use-glass: false
   glass-item: "PURPLE_STAINED_GLASS_PANE"
-
-  # Nội dung hiển thị ô Nhận Tiền
-  money-name: "&#55FF55💰 NHẬN TIỀN"
+  money-name: "&#00FFC8💰 &#00FFC8&lCẤT GIỮ TIỀN MẶT"
   money-lore:
-    - "&#AAAAAATiền đã tích luỹ:"
-    - "&#FFAA00➤ &f%money% &7$"
-    - "&8"
-    - "&#55FFFFSinh mỗi 3s: &a%rate% $"
-    - "&8"
-    - "&#FFFF55▶ Click để nhận!"
+    - "&#7F8C8D────────────────"
+    - "&#95A5A6🪙 Tiền đã tích luỹ:"
+    - "   &#00FF7F➥ &#00FF7F%money%$"
+    - ""
+    - "&#00E5FF⚡ Tốc độ sinh lời:"
+    - "   &#00FF7F✦ &#FFFFFF+%rate% $ &#7F8C8D/ &#00FF7F3 giây"
+    - "&#7F8C8D────────────────"
+    - "&#FFFF55👉 &#FFFF55&lCLICK ĐỂ THU HOẠCH"
 
   # Nội dung hiển thị ô Thông Tin
-  info-name: "&#55FFFF📖 THÔNG TIN LỒNG"
+  info-name: "&#00E5FF📖 &#00E5FF&lTHÔNG TIN LỒNG SPAWNER"
   info-lore:
-    - "&#55FFFF▸ Thực thể: &f%mob%"
-    - "&#55FFFF▸ Cấp: &#FFAA00%level% &#AAAAAA/ &#FFAA00%max_level%"
-    - "&#55FFFF▸ Chủ sở hữu: &#FFAA00%owner%"
-    - "&#55FFFF▸ Tiền mỗi 3s: &#55FF55%rate% $"
+    - "&#7F8C8D────────────────"
+    - "&#00E5FF🔮 Loại thực thể &#808080• &#FFFFFF%mob%"
+    - "&#FFD700⭐ Cấp độ lồng   &#808080• &#FFD700%level%&#7F8C8D/&#FFD700%max_level%"
+    - "&#FF70A6👑 Chủ sở hữu    &#808080• &#FFFFFF%owner%"
+    - "&#00FF7F💸 Hiệu suất     &#808080• &#00FF7F+%rate% $&#7F8C8D/3s"
+    - "&#7F8C8D────────────────"
 
-# Bảng giá mob
 mob-prices:
   ZOMBIE: 3
   SKELETON: 4
@@ -105,7 +111,6 @@ mob-prices:
   BREEZE: 32
   BOGGED: 14
 
-# Hệ số nhân tiền theo permission
 permission-multipliers:
   1: 1.0
   2: 1.2

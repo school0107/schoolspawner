@@ -20,7 +20,6 @@ public class SchoolSpawner extends JavaPlugin {
         getCommand("schoolspawner").setExecutor(cmd);
         getCommand("schoolspawner").setTabCompleter(cmd);
 
-        // schedule task
         manager.startTask();
 
         getLogger().info("§aSchoolSpawner enabled! Version " + getDescription().getVersion());
@@ -28,8 +27,10 @@ public class SchoolSpawner extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (manager != null) manager.saveAll();
-        if (manager != null) manager.stopTask();
+        if (manager != null) {
+            manager.stopTask();
+            manager.saveToDisk(); // Lưu lần cuối khi tắt server
+        }
         getLogger().info("§cSchoolSpawner disabled.");
     }
 
