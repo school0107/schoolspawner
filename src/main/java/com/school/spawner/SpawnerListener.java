@@ -185,8 +185,11 @@ public class SpawnerListener implements Listener {
         }
         if (data == null) { p.closeInventory(); return; }
 
+        // FIX LỖI BUILD: Tạo biến final để dùng trong lambda
+        final SpawnerData finalData = data;
+
         if (clicked.getType() == Material.GOLD_INGOT) {
-            double money = data.storedMoney;
+            double money = finalData.storedMoney;
             if (money <= 0) {
                 msg(p, "no-money");
                 return;
@@ -197,13 +200,14 @@ public class SpawnerListener implements Listener {
                 return;
             }
 
-            data.storedMoney = 0;
-            manager.put(data);
+            finalData.storedMoney = 0;
+            manager.put(finalData);
             
-            msg(p, "money-received", "%money%", SpawnerGUI.formatMoney(money), "%mob%", SpawnerManager.pretty(data.entityType));
+            msg(p, "money-received", "%money%", SpawnerGUI.formatMoney(money), "%mob%", SpawnerManager.pretty(finalData.entityType));
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
             
-            Bukkit.getScheduler().runTask(plugin, () -> plugin.getGui().open(p, data));
+            // Dùng finalData thay vì data
+            Bukkit.getScheduler().runTask(plugin, () -> plugin.getGui().open(p, finalData));
         }
     }
 
