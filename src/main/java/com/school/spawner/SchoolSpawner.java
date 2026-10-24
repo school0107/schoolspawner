@@ -7,6 +7,7 @@ public class SchoolSpawner extends JavaPlugin {
     private static SchoolSpawner instance;
     private SpawnerManager manager;
     private SpawnerGUI gui;
+    private SchoolExpansion expansion;
 
     @Override
     public void onEnable() {
@@ -22,6 +23,13 @@ public class SchoolSpawner extends JavaPlugin {
 
         manager.startTask();
 
+        // Đăng ký PlaceholderAPI
+        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            this.expansion = new SchoolExpansion(this);
+            this.expansion.register();
+            getLogger().info("§aHooked into PlaceholderAPI!");
+        }
+
         getLogger().info("§aSchoolSpawner enabled! Version " + getDescription().getVersion());
     }
 
@@ -29,7 +37,10 @@ public class SchoolSpawner extends JavaPlugin {
     public void onDisable() {
         if (manager != null) {
             manager.stopTask();
-            manager.saveToDisk(); // Lưu lần cuối khi tắt server
+            manager.saveToDisk();
+        }
+        if (expansion != null) {
+            expansion.unregister();
         }
         getLogger().info("§cSchoolSpawner disabled.");
     }
