@@ -17,14 +17,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SpawnerManager {
-
     private final SchoolSpawner plugin;
     private final Map<String, SpawnerData> spawners = new ConcurrentHashMap<>();
     private final File dataFile;
-    private final NamespacedKey keyMob;
-    private final NamespacedKey keyLevel;
-    private final NamespacedKey keyOwner;
-    private final NamespacedKey keyOwnerName;
+    private final NamespacedKey keyMob, keyLevel, keyOwner, keyOwnerName;
     private BukkitTask task;
 
     public SpawnerManager(SchoolSpawner plugin) {
@@ -44,10 +40,6 @@ public class SpawnerManager {
 
     public static String locKey(Location loc) {
         return loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
-    }
-
-    public static String locKey(World w, int x, int y, int z) {
-        return w.getName() + ":" + x + ":" + y + ":" + z;
     }
 
     public void startTask() {
@@ -87,7 +79,6 @@ public class SpawnerManager {
         return plugin.getConfig().getDouble("permission-multipliers." + best, 1.0);
     }
 
-    // ── Item factory ──────────────────────────────────────────────
     public ItemStack createSpawnerItem(EntityType type, int level, UUID owner, String ownerName) {
         ItemStack item = new ItemStack(Material.SPAWNER);
         ItemMeta meta = item.getItemMeta();
@@ -123,35 +114,27 @@ public class SpawnerManager {
 
     public EntityType getMobFromItem(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return null;
-        String s = meta.getPersistentDataContainer().get(keyMob, PersistentDataType.STRING);
+        String s = item.getItemMeta().getPersistentDataContainer().get(keyMob, PersistentDataType.STRING);
         if (s == null) return null;
         try { return EntityType.valueOf(s); } catch (Exception e) { return null; }
     }
 
     public int getLevelFromItem(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return 0;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return 0;
-        Integer i = meta.getPersistentDataContainer().get(keyLevel, PersistentDataType.INTEGER);
+        Integer i = item.getItemMeta().getPersistentDataContainer().get(keyLevel, PersistentDataType.INTEGER);
         return i == null ? 0 : i;
     }
 
     public UUID getOwnerFromItem(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return null;
-        String s = meta.getPersistentDataContainer().get(keyOwner, PersistentDataType.STRING);
+        String s = item.getItemMeta().getPersistentDataContainer().get(keyOwner, PersistentDataType.STRING);
         if (s == null) return null;
         try { return UUID.fromString(s); } catch (Exception e) { return null; }
     }
 
     public String getOwnerNameFromItem(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null) return null;
-        return meta.getPersistentDataContainer().get(keyOwnerName, PersistentDataType.STRING);
+        return item.getItemMeta().getPersistentDataContainer().get(keyOwnerName, PersistentDataType.STRING);
     }
 
     public static String pretty(EntityType type) {
@@ -164,11 +147,8 @@ public class SpawnerManager {
         return sb.toString().trim();
     }
 
-    // ── Spawner map ──────────────────────────────────────────────
-    public SpawnerData getAt(Location loc) {
-        return spawners.get(locKey(loc));
-    }
-
+    public SpawnerData getAt(Location loc) { return spawners.get(locKey(loc)); }
+    
     public void put(SpawnerData data) {
         spawners.put(locKey(data.location), data);
         saveAll();
@@ -181,7 +161,6 @@ public class SpawnerManager {
 
     public Collection<SpawnerData> all() { return spawners.values(); }
 
-    // ── Persistence ──────────────────────────────────────────────
     public void saveAll() {
         YamlConfiguration yml = new YamlConfiguration();
         for (Map.Entry<String, SpawnerData> e : spawners.entrySet()) {

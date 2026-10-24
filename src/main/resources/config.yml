@@ -1,45 +1,32 @@
-# ══════════════════════════════════════════════
-#        SchoolSpawner Configuration
-# ══════════════════════════════════════════════
-
 settings:
-  # Thời gian sinh tiền (giây)
   generate-interval: 3
-  # Tiền tối đa của 1 spawner (tránh lag/overflow)
   max-money-per-spawner: 100000000
-  # Cho phép gộp khi shift + right-click
   allow-merge: true
-  # Cấp tối đa
   max-level: 100
-  # Hệ số level (mỗi level nhân thêm bao nhiêu)
-  # Ví dụ: level 1 = 1.0x, level 2 = 2.0x ... => multiplier = level * level-multiplier
   level-multiplier: 1.0
-  # Chỉ owner hoặc admin mới mở được GUI
   owner-only-gui: true
+  # Tỷ lệ rơi lồng khi giết quái (0.0 -> 1.0)
+  kill-drop-chance: 1.0 
+  # Lệnh fallback nếu không có Vault (dùng %player% và %amount%)
+  fallback-money-command: ""
 
-# Format tin nhắn
 messages:
   prefix: "&#FFAA00[&#FF55FFSchoolSpawner&#FFAA00] &r"
   no-permission: "&cBạn không có quyền!"
   player-only: "&cChỉ dành cho người chơi!"
-  spawner-given: "&aĐã trao lồng &e%mob% &aCấp &e%level%"
-  spawner-broken: "&eBạn đã nhận lồng &6%mob &7(Cấp %level%)"
-  spawner-placed: "&aĐã đặt lồng &e%mob &aCấp &e%level%"
-  spawner-merged: "&d✦ Gộp thành công! Lồng &e%mob &dđã lên cấp &e%level%&d!"
+  spawner-broken: "&eBạn đã nhận lồng &6%mob% &7(Cấp %level%)"
+  spawner-placed: "&aĐã đặt lồng &e%mob% &aCấp &e%level%"
+  spawner-merged: "&#FF55FF✦ Gộp thành công! Lồng &e%mob% &#FF55FFđã lên cấp &#FFAA00%level%&#FF55FF!"
   merge-fail-different: "&cKhông thể gộp 2 lồng khác loại mob!"
   merge-fail-max: "&cLồng đã đạt cấp tối đa!"
   not-owner: "&cLồng này không phải của bạn!"
-  money-received: "&a+ %money% &7từ lồng &e%mob"
+  money-received: "&#55FF55+ %money%$ &7từ lồng &e%mob%"
   reload: "&aĐã reload config SchoolSpawner!"
   invalid-mob: "&cMob không hợp lệ: %mob%"
   invalid-level: "&cLevel không hợp lệ!"
-  full-inventory: "&cTúi đồ đã đầy!"
-  no-spawner-in-hand: "&cBạn phải cầm lồng trên tay!"
+  no-money: "&cChưa có tiền để nhận!"
+  no-economy: "&cServer chưa cài Vault/ Economy!"
 
-# Bảng giá theo từng loại mob (giá gốc level 1, mỗi 3 giây)
-# 3$ là lồng cùi nhất (VD: Zombie, Skeleton...), 300$ là lồng xịn nhất (Wither, Ender Dragon...)
-# Level nhân theo: base * level * level-multiplier
-# Permission vspawner.N sẽ nhân thêm hệ số (xem file Java, nhưng tóm tắt: 2->1.2, 10->2.0)
 mob-prices:
   ZOMBIE: 3
   SKELETON: 4
@@ -83,8 +70,6 @@ mob-prices:
   BREEZE: 32
   BOGGED: 14
 
-# Permission multiplier: vspawner.X -> hệ số
-# (Lấy cấp permission cao nhất người chơi có)
 permission-multipliers:
   1: 1.0
   2: 1.2

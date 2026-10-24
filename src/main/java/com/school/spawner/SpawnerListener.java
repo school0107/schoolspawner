@@ -4,6 +4,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -11,15 +12,17 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
 
 public class SpawnerListener implements Listener {
-
     private final SchoolSpawner plugin;
     private final SpawnerManager manager;
 
@@ -37,13 +40,31 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // ── Place spawner ──────────────────────────────────────────────
+    // 1. Kill mob rơi lồng
+    @EventHandler
+    public void onMobDeath(EntityDeathEvent e) {
+        LivingEntity entity = e.getEntity();
+        Player killer = entity.getKiller();
+        if (killer == null) return;
+
+        // Bỏ qua nếu là mob triệu hồi từ lồng
+        if (entity.hasMetadata("schoolspawner_mob")) return;
+
+        double chance = plugin.getConfig().getDouble("settings.kill-drop-chance", 1.0);
+        if (Math.random() <= chance) {
+            EntityType type = entity.getType();
+            ItemStack spawnerItem = manager.createSpawnerItem(type, 1, killer.getUniqueId(), killer.getName());
+            entity.getWorld().dropItemNaturally(entity.getLocation(), spawnerItem);
+        }
+    }
+
+    // 2. Đặt lồng
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent e) {
         if (e.getBlock().getType() != Material.SPAWNER) return;
         ItemStack item = e.getItemInHand();
         EntityType type = manager.getMobFromItem(item);
-        if (type == null) return; // vanilla spawner, ignore
+        if (type == null) return;
 
         Player p = e.getPlayer();
         int level = manager.getLevelFromItem(item);
@@ -57,16 +78,15 @@ public class SpawnerListener implements Listener {
         msg(p, "spawner-placed", "%mob%", SpawnerManager.pretty(type), "%level%", String.valueOf(level));
     }
 
-    // ── Break spawner ──────────────────────────────────────────────
+    // 3. Đập lồng
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent e) {
         Block b = e.getBlock();
         if (b.getType() != Material.SPAWNER) return;
         SpawnerData data = manager.getAt(b.getLocation());
-        if (data == null) return; // vanilla
+        if (data == null) return;
 
         Player p = e.getPlayer();
-        // Cho phép đập nếu là owner hoặc có admin
         if (!p.getUniqueId().equals(data.owner) && !p.hasPermission("schoolspawner.admin")) {
             e.setCancelled(true);
             msg(p, "not-owner");
@@ -80,7 +100,7 @@ public class SpawnerListener implements Listener {
         msg(p, "spawner-broken", "%mob%", SpawnerManager.pretty(data.entityType), "%level%", String.valueOf(data.level));
     }
 
-    // ── Right-click spawner ───────────────────────────────────────
+    // 4. Shift + Chuột phải để gộp toàn bộ trên tay
     @EventHandler(priority = EventPriority.HIGH)
     public void onInteract(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
@@ -90,50 +110,50 @@ public class SpawnerListener implements Listener {
 
         Player p = e.getPlayer();
         SpawnerData data = manager.getAt(b.getLocation());
-        if (data == null) return; // vanilla spawner
+        if (data == null) return;
 
         e.setCancelled(true);
-
-        // check owner
         boolean isOwner = p.getUniqueId().equals(data.owner);
         boolean isAdmin = p.hasPermission("schoolspawner.admin");
 
         ItemStack inHand = p.getInventory().getItemInMainHand();
         EntityType handMob = manager.getMobFromItem(inHand);
 
-        // Merge attempt: shift + holding a school spawner with same mob
+        // Gộp lồng (Shift + Chuột phải)
         if (p.isSneaking() && handMob != null && plugin.getConfig().getBoolean("settings.allow-merge", true)) {
             if (handMob != data.entityType) {
                 msg(p, "merge-fail-different");
                 return;
             }
-            int maxLevel = plugin.getConfig().getInt("settings.max-level", 100);
-            int handLevel = manager.getLevelFromItem(inHand);
-            UUID handOwner = manager.getOwnerFromItem(inHand);
-            if (handOwner != null && !handOwner.equals(data.owner) && !isAdmin) {
+            if (!isOwner && !isAdmin) {
                 msg(p, "not-owner");
                 return;
             }
-            if (data.level + handLevel > maxLevel) {
+
+            int maxLevel = plugin.getConfig().getInt("settings.max-level", 100);
+            int handAmount = inHand.getAmount();
+            int handLevel = manager.getLevelFromItem(inHand);
+            int totalLevelToAdd = handAmount * handLevel;
+
+            if (data.level + totalLevelToAdd > maxLevel) {
                 msg(p, "merge-fail-max");
                 return;
             }
-            // consume one from hand
-            if (inHand.getAmount() > 1) inHand.setAmount(inHand.getAmount() - 1);
-            else p.getInventory().setItemInMainHand(null);
 
-            data.level += handLevel;
+            // Xoá toàn bộ lồng trên tay
+            p.getInventory().setItemInMainHand(null);
+
+            data.level += totalLevelToAdd;
             data.lastGenerate = System.currentTimeMillis();
             manager.put(data);
 
             msg(p, "spawner-merged", "%mob%", SpawnerManager.pretty(data.entityType), "%level%", String.valueOf(data.level));
-            // particles
             b.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, b.getLocation().add(0.5, 0.5, 0.5), 20, 0.3, 0.3, 0.3);
             b.getWorld().playSound(b.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.4f);
             return;
         }
 
-        // GUI open
+        // Mở GUI
         if (plugin.getConfig().getBoolean("settings.owner-only-gui", true) && !isOwner && !isAdmin) {
             msg(p, "not-owner");
             return;
@@ -141,29 +161,74 @@ public class SpawnerListener implements Listener {
         plugin.getGui().open(p, data);
     }
 
-    // ── GUI click ────────────────────────────────────────────────
+    // 5. Click trong GUI
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
         String title = LegacyComponentSerializer.legacySection().serialize(e.getView().title());
-        // safer: check our custom title prefix via component compare
-        // Simplify: rely on unique title content
-        String plain = LegacyComponentSerializer.legacySection().serialize(e.getView().title());
-        if (!plain.contains("Lồng")) return;
+        if (!title.contains("Lồng")) return;
         e.setCancelled(true);
 
         ItemStack clicked = e.getCurrentItem();
-        if (clicked == null) return;
+        if (clicked == null || clicked.getType() == Material.AIR) return;
+        
+        ItemMeta meta = clicked.getItemMeta();
+        if (meta == null) return;
+        
+        NamespacedKey locKey = plugin.getGui().getLocKey();
+        String keyStr = meta.getPersistentDataContainer().get(locKey, PersistentDataType.STRING);
+        if (keyStr == null) return;
 
-        // Tìm spawner data bằng vị trí khoá theo view — không có; dùng item name
-        // Thay vào đó ta lưu location vào NBT của item info? Đơn giản: dùng map tạm thời qua player open.
-        // Tối ưu: dùng PDC trong item GOLD_INGOT chứa vị trí.
-        // Để đơn giản và ổn định: ta scan lại các spawner của player, và kiểm tra block dưới chân... 
-        // => Cách chính xác: dùng item PDC chứa loc key.
+        SpawnerData data = null;
+        for (SpawnerData d : manager.all()) {
+            if (SpawnerManager.locKey(d.location).equals(keyStr)) { data = d; break; }
+        }
+        if (data == null) { p.closeInventory(); return; }
 
-        // Ta cần lấy loc key từ item money/info — nhưng code trên chưa gắn.
-        // → Sửa: GUI gọi với data, nhưng InventoryClick chỉ nhận title. Ta sẽ dùng biện pháp khác:
-        // Player mở GUI tại 1 block spawner nhất định. Lưu tạm vào map playerSpawner.
-        // (Cách này an toàn với đa số trường hợp)
+        if (clicked.getType() == Material.GOLD_INGOT) {
+            double money = data.storedMoney;
+            if (money <= 0) {
+                msg(p, "no-money");
+                return;
+            }
+            
+            if (!giveMoney(p, money)) {
+                msg(p, "no-economy");
+                return;
+            }
+
+            data.storedMoney = 0;
+            manager.put(data);
+            
+            msg(p, "money-received", "%money%", SpawnerGUI.formatMoney(money), "%mob%", SpawnerManager.pretty(data.entityType));
+            p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
+            
+            Bukkit.getScheduler().runTask(plugin, () -> plugin.getGui().open(p, data));
+        }
+    }
+
+    private boolean giveMoney(Player p, double amount) {
+        try {
+            Class<?> vault = Class.forName("net.milkbowl.vault.economy.Economy");
+            Object registration = Bukkit.getServicesManager().getRegistration(vault);
+            if (registration != null) {
+                Object provider = registration.getClass().getMethod("getProvider").invoke(registration);
+                vault.getMethod("depositPlayer", org.bukkit.OfflinePlayer.class, double.class)
+                        .invoke(provider, p, amount);
+                return true;
+            }
+        } catch (Throwable ignored) {}
+        
+        String cmd = plugin.getConfig().getString("settings.fallback-money-command", "");
+        if (cmd != null && !cmd.isEmpty()) {
+            String c = cmd.replace("%player%", p.getName()).replace("%amount%", String.valueOf(amount));
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), c);
+            return true;
+        }
+        if (Bukkit.getPluginManager().isPluginEnabled("Essentials")) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + p.getName() + " " + (long) amount);
+            return true;
+        }
+        return false;
     }
 }
