@@ -1,0 +1,40 @@
+name: SchoolSpawner
+version: 1.0.0
+main: com.school.spawner.SchoolSpawner
+api-version: '1.21'
+author: School
+description: Smart spawner with level merge, money generation and RGB GUI.
+commands:
+  schoolspawner:
+    aliases: [ss, spawner, sspawner]
+    description: SchoolSpawner main command
+    permission: schoolspawner.use
+permissions:
+  schoolspawner.use:
+    default: op
+  schoolspawner.give:
+    default: op
+  schoolspawner.reload:
+    default: op
+  schoolspawner.admin:
+    default: op
+  vspawner.1:
+    default: false
+  vspawner.2:
+    default: false
+  vspawner.3:
+    default: false
+  vspawner.4:
+    default: false
+  vspawner.5:
+    default: false
+  vspawner.6:
+    default: false
+  vspawner.7:
+    default: false
+  vspawner.8:
+    default: false
+  vspawner.9:
+    default: false
+  vspawner.10:
+    default: false
