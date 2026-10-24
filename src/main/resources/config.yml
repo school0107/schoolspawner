@@ -5,28 +5,63 @@ settings:
   max-level: 100
   level-multiplier: 1.0
   owner-only-gui: true
-  # Tỷ lệ rơi lồng khi giết quái (0.0 -> 1.0)
-  kill-drop-chance: 1.0 
+  # Tỷ lệ rơi lồng cơ bản (sẽ bị ghi đè bởi permission spawnerdrop.1 -> 4)
+  kill-drop-chance: 0.5
   # Lệnh fallback nếu không có Vault (dùng %player% và %amount%)
   fallback-money-command: ""
 
 messages:
-  prefix: "&#FFAA00[&#FF55FFSchoolSpawner&#FFAA00] &r"
-  no-permission: "&cBạn không có quyền!"
-  player-only: "&cChỉ dành cho người chơi!"
-  spawner-broken: "&eBạn đã nhận lồng &6%mob% &7(Cấp %level%)"
-  spawner-placed: "&aĐã đặt lồng &e%mob% &aCấp &e%level%"
-  spawner-merged: "&#FF55FF✦ Gộp thành công! Lồng &e%mob% &#FF55FFđã lên cấp &#FFAA00%level%&#FF55FF!"
-  merge-fail-different: "&cKhông thể gộp 2 lồng khác loại mob!"
-  merge-fail-max: "&cLồng đã đạt cấp tối đa!"
-  not-owner: "&cLồng này không phải của bạn!"
-  money-received: "&#55FF55+ %money%$ &7từ lồng &e%mob%"
-  reload: "&aĐã reload config SchoolSpawner!"
-  invalid-mob: "&cMob không hợp lệ: %mob%"
-  invalid-level: "&cLevel không hợp lệ!"
-  no-money: "&cChưa có tiền để nhận!"
-  no-economy: "&cServer chưa cài Vault/ Economy!"
+  prefix: "&#FFAA00[&#FF55FF✦ SchoolSpawner &#FFAA00] &r"
+  no-permission: "&#FF5555✖ Bạn không có quyền sử dụng lệnh này!"
+  player-only: "&#FF5555✖ Chỉ dành cho người chơi!"
+  spawner-broken: "&#55FF55✔ Bạn đã thu hồi lồng &#FFAA00%mob% &#55FF55(Cấp %level%)"
+  spawner-placed: "&#55FF55✔ Đã đặt lồng &#FFAA00%mob% &#55FF55(Cấp %level%)"
+  spawner-merged: "&#FF55FF✦ Gộp thành công! Lồng &#FFFF55%mob% &#FF55FFđã lên cấp &#FFAA00%level%&#FF55FF!"
+  merge-fail-different: "&#FF5555✖ Không thể gộp 2 lồng khác loại mob!"
+  merge-fail-max: "&#FF5555✖ Lồng đã đạt cấp tối đa!"
+  not-owner: "&#FF5555✖ Lồng này không phải của bạn!"
+  money-received: "&#55FF55✔ Nhận được &#FFAA00%money%$ &#55FF55từ lồng &#FFFF55%mob%"
+  reload: "&#55FF55✔ Đã reload config SchoolSpawner thành công!"
+  no-money: "&#FFAA00⚠ Lồng chưa sinh ra tiền, vui lòng đợi!"
+  no-economy: "&#FF5555✖ Server chưa cài đặt Vault/ Economy để nhận tiền!"
+  drop-spawner: "&#FF55FF✦ Bạn nhặt được lồng &#FFFF55%mob% &#FF55FFtừ quái vật!"
 
+# ══════════════════════════════════════════════
+# CẤU HÌNH GUI (Menu 27 ô)
+# ══════════════════════════════════════════════
+gui:
+  # Tiêu đề menu
+  title: "&#FF55FF✦ &fLồng %mob% &#AAAAAA[Cấp %level%]"
+  # Item đại diện cho ô Nhận Tiền
+  money-item: "GOLD_INGOT"
+  # Item đại diện cho ô Thông Tin
+  info-item: "BOOK"
+  # Vị trí các ô (từ 0 đến 26)
+  money-slot: 11
+  info-slot: 15
+  # Bật/tắt kính trang trí (nếu bật, các ô trống sẽ có kính)
+  use-glass: false
+  glass-item: "PURPLE_STAINED_GLASS_PANE"
+
+  # Nội dung hiển thị ô Nhận Tiền
+  money-name: "&#55FF55💰 NHẬN TIỀN"
+  money-lore:
+    - "&#AAAAAATiền đã tích luỹ:"
+    - "&#FFAA00➤ &f%money% &7$"
+    - "&8"
+    - "&#55FFFFSinh mỗi 3s: &a%rate% $"
+    - "&8"
+    - "&#FFFF55▶ Click để nhận!"
+
+  # Nội dung hiển thị ô Thông Tin
+  info-name: "&#55FFFF📖 THÔNG TIN LỒNG"
+  info-lore:
+    - "&#55FFFF▸ Thực thể: &f%mob%"
+    - "&#55FFFF▸ Cấp: &#FFAA00%level% &#AAAAAA/ &#FFAA00%max_level%"
+    - "&#55FFFF▸ Chủ sở hữu: &#FFAA00%owner%"
+    - "&#55FFFF▸ Tiền mỗi 3s: &#55FF55%rate% $"
+
+# Bảng giá mob
 mob-prices:
   ZOMBIE: 3
   SKELETON: 4
@@ -70,6 +105,7 @@ mob-prices:
   BREEZE: 32
   BOGGED: 14
 
+# Hệ số nhân tiền theo permission
 permission-multipliers:
   1: 1.0
   2: 1.2

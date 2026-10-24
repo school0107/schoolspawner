@@ -18,6 +18,18 @@ permissions:
     default: op
   schoolspawner.admin:
     default: op
+  spawnerdrop.1:
+    default: true
+    description: 50% tỷ lệ rơi lồng
+  spawnerdrop.2:
+    default: false
+    description: 70% tỷ lệ rơi lồng
+  spawnerdrop.3:
+    default: false
+    description: 90% tỷ lệ rơi lồng
+  spawnerdrop.4:
+    default: false
+    description: 100% tỷ lệ rơi lồng
   vspawner.1:
     default: false
   vspawner.2:

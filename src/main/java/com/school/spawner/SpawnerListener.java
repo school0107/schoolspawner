@@ -20,11 +20,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class SpawnerListener implements Listener {
     private final SchoolSpawner plugin;
     private final SpawnerManager manager;
+    // Chống spam click
+    private final Map<UUID, Long> clickCooldown = new HashMap<>();
 
     public SpawnerListener(SchoolSpawner plugin) {
         this.plugin = plugin;
@@ -40,21 +44,32 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // 1. Kill mob rơi lồng
+    // 1. Kill mob rơi lồng (Phân quyền tỷ lệ)
     @EventHandler
     public void onMobDeath(EntityDeathEvent e) {
         LivingEntity entity = e.getEntity();
         Player killer = entity.getKiller();
         if (killer == null) return;
 
-        // Bỏ qua nếu là mob triệu hồi từ lồng
         if (entity.hasMetadata("schoolspawner_mob")) return;
 
-        double chance = plugin.getConfig().getDouble("settings.kill-drop-chance", 1.0);
+        double chance = plugin.getConfig().getDouble("settings.kill-drop-chance", 0.5);
+
+        if (killer.hasPermission("spawnerdrop.4")) {
+            chance = 1.0;
+        } else if (killer.hasPermission("spawnerdrop.3")) {
+            chance = 0.9;
+        } else if (killer.hasPermission("spawnerdrop.2")) {
+            chance = 0.7;
+        } else if (killer.hasPermission("spawnerdrop.1")) {
+            chance = 0.5;
+        }
+
         if (Math.random() <= chance) {
             EntityType type = entity.getType();
             ItemStack spawnerItem = manager.createSpawnerItem(type, 1, killer.getUniqueId(), killer.getName());
             entity.getWorld().dropItemNaturally(entity.getLocation(), spawnerItem);
+            msg(killer, "drop-spawner", "%mob%", SpawnerManager.pretty(type));
         }
     }
 
@@ -100,7 +115,7 @@ public class SpawnerListener implements Listener {
         msg(p, "spawner-broken", "%mob%", SpawnerManager.pretty(data.entityType), "%level%", String.valueOf(data.level));
     }
 
-    // 4. Shift + Chuột phải để gộp toàn bộ trên tay
+    // 4. Shift + Chuột phải để gộp
     @EventHandler(priority = EventPriority.HIGH)
     public void onInteract(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
@@ -119,7 +134,6 @@ public class SpawnerListener implements Listener {
         ItemStack inHand = p.getInventory().getItemInMainHand();
         EntityType handMob = manager.getMobFromItem(inHand);
 
-        // Gộp lồng (Shift + Chuột phải)
         if (p.isSneaking() && handMob != null && plugin.getConfig().getBoolean("settings.allow-merge", true)) {
             if (handMob != data.entityType) {
                 msg(p, "merge-fail-different");
@@ -140,9 +154,7 @@ public class SpawnerListener implements Listener {
                 return;
             }
 
-            // Xoá toàn bộ lồng trên tay
             p.getInventory().setItemInMainHand(null);
-
             data.level += totalLevelToAdd;
             data.lastGenerate = System.currentTimeMillis();
             manager.put(data);
@@ -153,7 +165,6 @@ public class SpawnerListener implements Listener {
             return;
         }
 
-        // Mở GUI
         if (plugin.getConfig().getBoolean("settings.owner-only-gui", true) && !isOwner && !isAdmin) {
             msg(p, "not-owner");
             return;
@@ -168,6 +179,11 @@ public class SpawnerListener implements Listener {
         String title = LegacyComponentSerializer.legacySection().serialize(e.getView().title());
         if (!title.contains("Lồng")) return;
         e.setCancelled(true);
+
+        // Chống spam click (0.5s)
+        long now = System.currentTimeMillis();
+        if (clickCooldown.getOrDefault(p.getUniqueId(), 0L) > now) return;
+        clickCooldown.put(p.getUniqueId(), now + 500);
 
         ItemStack clicked = e.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
@@ -185,10 +201,13 @@ public class SpawnerListener implements Listener {
         }
         if (data == null) { p.closeInventory(); return; }
 
-        // FIX LỖI BUILD: Tạo biến final để dùng trong lambda
         final SpawnerData finalData = data;
 
-        if (clicked.getType() == Material.GOLD_INGOT) {
+        // So sánh Item Type (nhận biết ô nhận tiền)
+        Material moneyMat = Material.matchMaterial(plugin.getConfig().getString("gui.money-item", "GOLD_INGOT"));
+        if (moneyMat == null) moneyMat = Material.GOLD_INGOT;
+
+        if (clicked.getType() == moneyMat) {
             double money = finalData.storedMoney;
             if (money <= 0) {
                 msg(p, "no-money");
@@ -206,7 +225,6 @@ public class SpawnerListener implements Listener {
             msg(p, "money-received", "%money%", SpawnerGUI.formatMoney(money), "%mob%", SpawnerManager.pretty(finalData.entityType));
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
             
-            // Dùng finalData thay vì data
             Bukkit.getScheduler().runTask(plugin, () -> plugin.getGui().open(p, finalData));
         }
     }

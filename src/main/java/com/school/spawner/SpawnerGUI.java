@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -11,7 +12,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class SpawnerGUI {
@@ -28,39 +28,73 @@ public class SpawnerGUI {
     public NamespacedKey getLocKey() { return locKey; }
 
     public void open(Player p, SpawnerData data) {
-        Component title = TextUtil.color("&#FF55FF✦ &fLồng " + SpawnerManager.pretty(data.entityType) + " &#AAAAAA[Cấp " + data.level + "]");
-        // Chỉ 9 slot, bỏ kính
-        Inventory inv = Bukkit.createInventory(null, 9, title);
+        FileConfiguration cfg = plugin.getConfig();
+        String titleStr = cfg.getString("gui.title", "&#FF55FF✦ &fLồng %mob% &#AAAAAA[Cấp %level%]")
+                .replace("%mob%", SpawnerManager.pretty(data.entityType))
+                .replace("%level%", String.valueOf(data.level));
+        
+        Component title = TextUtil.color(titleStr);
+        Inventory inv = Bukkit.createInventory(null, 27, title);
         String keyStr = SpawnerManager.locKey(data.location);
 
-        // Slot 2: Nhận tiền
-        ItemStack money = new ItemStack(Material.GOLD_INGOT);
+        // Ô Nhận Tiền
+        Material moneyMat = Material.matchMaterial(cfg.getString("gui.money-item", "GOLD_INGOT"));
+        if (moneyMat == null) moneyMat = Material.GOLD_INGOT;
+        ItemStack money = new ItemStack(moneyMat);
         ItemMeta mm = money.getItemMeta();
-        mm.displayName(TextUtil.color("&#55FF55💰 NHẬN TIỀN"));
-        List<Component> lore = new ArrayList<>();
-        lore.add(TextUtil.color("&#AAAAAATiền đã tích luỹ:"));
-        lore.add(TextUtil.color("&#FFAA00➤ &f" + formatMoney(data.storedMoney) + " &7$"));
-        lore.add(TextUtil.color("&8"));
-        lore.add(TextUtil.color("&#55FFFFSinh mỗi 3s: &a" + formatMoney(data.basePrice()) + " $"));
-        lore.add(TextUtil.color("&8"));
-        lore.add(TextUtil.color("&#FFFF55▶ Click để nhận!"));
-        mm.lore(lore);
-        mm.getPersistentDataContainer().set(locKey, PersistentDataType.STRING, keyStr);
-        money.setItemMeta(mm);
-        inv.setItem(2, money);
+        if (mm != null) {
+            mm.displayName(TextUtil.color(cfg.getString("gui.money-name", "&#55FF55💰 NHẬN TIỀN")));
+            List<Component> moneyLore = new ArrayList<>();
+            for (String line : cfg.getStringList("gui.money-lore")) {
+                moneyLore.add(TextUtil.color(line
+                        .replace("%money%", formatMoney(data.storedMoney))
+                        .replace("%rate%", formatMoney(data.basePrice()))
+                        .replace("%mob%", SpawnerManager.pretty(data.entityType))
+                        .replace("%level%", String.valueOf(data.level))));
+            }
+            mm.lore(moneyLore);
+            mm.getPersistentDataContainer().set(locKey, PersistentDataType.STRING, keyStr);
+            money.setItemMeta(mm);
+        }
+        int moneySlot = cfg.getInt("gui.money-slot", 11);
+        if (moneySlot >= 0 && moneySlot < 27) inv.setItem(moneySlot, money);
 
-        // Slot 6: Thông tin
-        ItemStack info = new ItemStack(Material.BOOK);
+        // Ô Thông Tin
+        Material infoMat = Material.matchMaterial(cfg.getString("gui.info-item", "BOOK"));
+        if (infoMat == null) infoMat = Material.BOOK;
+        ItemStack info = new ItemStack(infoMat);
         ItemMeta im = info.getItemMeta();
-        im.displayName(TextUtil.color("&#55FFFF📖 THÔNG TIN LỒNG"));
-        im.lore(Arrays.asList(
-                TextUtil.color("&#55FFFF▸ Thực thể: &f" + SpawnerManager.pretty(data.entityType)),
-                TextUtil.color("&#55FFFF▸ Cấp: &#FFAA00" + data.level),
-                TextUtil.color("&#55FFFF▸ Chủ sở hữu: &#FFAA00" + (data.ownerName == null ? "Server" : data.ownerName)),
-                TextUtil.color("&#55FFFF▸ Tiền mỗi 3s: &#55FF55" + formatMoney(data.basePrice()) + " $")
-        ));
-        info.setItemMeta(im);
-        inv.setItem(6, info);
+        if (im != null) {
+            im.displayName(TextUtil.color(cfg.getString("gui.info-name", "&#55FFFF📖 THÔNG TIN LỒNG")));
+            List<Component> infoLore = new ArrayList<>();
+            for (String line : cfg.getStringList("gui.info-lore")) {
+                infoLore.add(TextUtil.color(line
+                        .replace("%mob%", SpawnerManager.pretty(data.entityType))
+                        .replace("%level%", String.valueOf(data.level))
+                        .replace("%max_level%", String.valueOf(cfg.getInt("settings.max-level", 100)))
+                        .replace("%owner%", data.ownerName == null ? "Server" : data.ownerName)
+                        .replace("%rate%", formatMoney(data.basePrice()))));
+            }
+            im.lore(infoLore);
+            info.setItemMeta(im);
+        }
+        int infoSlot = cfg.getInt("gui.info-slot", 15);
+        if (infoSlot >= 0 && infoSlot < 27) inv.setItem(infoSlot, info);
+
+        // Kính trang trí (nếu bật)
+        if (cfg.getBoolean("gui.use-glass", false)) {
+            Material glassMat = Material.matchMaterial(cfg.getString("gui.glass-item", "PURPLE_STAINED_GLASS_PANE"));
+            if (glassMat == null) glassMat = Material.PURPLE_STAINED_GLASS_PANE;
+            ItemStack glass = new ItemStack(glassMat);
+            ItemMeta gm = glass.getItemMeta();
+            if (gm != null) {
+                gm.displayName(TextUtil.color("&r"));
+                glass.setItemMeta(gm);
+            }
+            for (int i = 0; i < 27; i++) {
+                if (inv.getItem(i) == null) inv.setItem(i, glass);
+            }
+        }
 
         p.openInventory(inv);
     }
