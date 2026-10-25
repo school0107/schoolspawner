@@ -1,5 +1,6 @@
 package com.school.spawner;
 
+import com.destroystokyo.paper.event.entity.SpawnerSpawnEvent; // <-- IMPORT ĐÚNG CHO PAPER/LEAF
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -17,7 +18,6 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.world.SpawnerSpawnEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -46,10 +46,9 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // CHẶN TRIỆU HỒI QUÁI TỪ LỒNG
+    // CHẶN TRIỆU HỒI QUÁI TỪ LỒNG (Dùng sự kiện Paper chuẩn)
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onSpawnerSpawn(SpawnerSpawnEvent e) {
-        // Nếu lồng này nằm trong danh sách quản lý của plugin -> Hủy triệu hồi
         if (manager.getAt(e.getSpawner().getLocation()) != null) {
             e.setCancelled(true);
         }
