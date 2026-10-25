@@ -1,6 +1,8 @@
 package com.school.spawner;
 
 import org.bukkit.*;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.CreatureSpawner;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -90,7 +92,7 @@ public class SpawnerManager {
         return plugin.getConfig().getDouble("permission-multipliers." + best, 1.0);
     }
 
-    // Tạo Item Lồng từ config
+    // Tạo Item Lồng (Dùng khối SPAWNER)
     public ItemStack createSpawnerItem(EntityType type, int level, UUID owner, String ownerName) {
         ItemStack item = new ItemStack(Material.SPAWNER);
         ItemMeta meta = item.getItemMeta();
@@ -165,7 +167,6 @@ public class SpawnerManager {
 
     public SpawnerData getAt(Location loc) { return spawners.get(locKey(loc)); }
     
-    // Đánh dấu cần lưu thay vì lưu ngay lập tức để tránh lag
     public void put(SpawnerData data) {
         spawners.put(locKey(data.location), data);
         needsSave = true;
@@ -178,7 +179,6 @@ public class SpawnerManager {
 
     public Collection<SpawnerData> all() { return spawners.values(); }
 
-    // Hàm lưu file vật lý (chạy Async)
     public void saveToDisk() {
         YamlConfiguration yml = new YamlConfiguration();
         for (Map.Entry<String, SpawnerData> e : spawners.entrySet()) {
@@ -222,15 +222,27 @@ public class SpawnerManager {
             String os = s.getString("owner");
             if (os != null) try { owner = UUID.fromString(os); } catch (Exception ignored) {}
             String ownerName = s.getString("ownerName", "Server");
-            SpawnerData d = new SpawnerData(new Location(w, x, y, z), type, lvl, owner, ownerName);
+            Location loc = new Location(w, x, y, z);
+            SpawnerData d = new SpawnerData(loc, type, lvl, owner, ownerName);
             d.storedMoney = s.getDouble("money", 0);
             spawners.put(locKey(d.location), d);
+
+            // Cập nhật lại hình ảnh con mob cho block lồng dưới đất sau khi restart server
+            if (loc.getBlock().getType() == Material.SPAWNER) {
+                BlockState state = loc.getBlock().getState();
+                if (state instanceof CreatureSpawner spawner) {
+                    if (spawner.getSpawnedType() != type) {
+                        spawner.setSpawnedType(type);
+                        spawner.update(true, false);
+                    }
+                }
+            }
         }
     }
 
     public void reload() {
         stopTask();
-        saveToDisk(); // Lưu trước khi reload
+        saveToDisk();
         loadAll();
         startTask();
     }
