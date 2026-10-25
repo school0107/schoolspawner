@@ -28,16 +28,19 @@ messages:
 
 # Cấu hình Item Lồng (Khi cầm trên tay)
 spawner-item:
-  name: "&#FF55FF✦ Lồng %mob% &#AAAAAA[Cấp %level%]"
+  name: "&#FF60A8✦ &#FF60A8&lLỒNG SPAWNER: &#FFFFFF&l%mob% &#7F8C8D[&#FFD700Cấp %level%&#7F8C8D]"
   lore:
-    - "&#55FFFF▸ Thực thể: &f%mob%"
-    - "&#55FFFF▸ Cấp: &#FFAA00%level%"
-    - "&#55FFFF▸ Sinh tiền: &#55FF55%rate%$ &7/ 3s"
-    - "&#55FFFF▸ Chủ sở hữu: &#FFAA00%owner%"
-    - "&8"
-    - "&#FFFF55Shift + Chuột phải &7để gộp"
-    - "&#55FF55Chuột phải &7để mở menu"
-    - "&#FF5555Đập để thu hồi"
+    - "&#7F8C8D────────────────────"
+    - "&#00E5FF🔮 Loại thực thể &#808080• &#FFFFFF%mob%"
+    - "&#FFD700⭐ Cấp độ lồng   &#808080• &#FFD700%level%"
+    - "&#00FF7F💸 Hiệu suất     &#808080• &#00FF7F+%rate% $&#7F8C8D/3s"
+    - "&#FF70A6👑 Chủ sở hữu    &#808080• &#FFFFFF%owner%"
+    - "&#7F8C8D────────────────────"
+    - "&#00E5FF🖱️ HƯỚNG DẪN SỬ DỤNG:"
+    - "  &#FFD700➔ &#FFFFFFChuột phải &#808080• &#00FF7FMở giao diện"
+    - "  &#FFD700➔ &#FFFFFFShift + Chuột phải &#808080• &#00E5FFGộp lồng"
+    - "  &#FF4757➔ &#FFFFFFĐập vỡ block &#808080• &#FF4757Thu hồi lồng"
+    - "&#7F8C8D────────────────────"
 
 gui:
   title: "&#FF55FF✦ &fLồng %mob% &#AAAAAA[Cấp %level%]"

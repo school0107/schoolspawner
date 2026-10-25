@@ -17,6 +17,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.world.SpawnerSpawnEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -43,6 +44,15 @@ public class SpawnerListener implements Listener {
             m = m.replace(repl[i], repl[i + 1]);
         }
         p.sendMessage(TextUtil.color(prefix + m));
+    }
+
+    // CHẶN TRIỆU HỒI QUÁI TỪ LỒNG
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onSpawnerSpawn(SpawnerSpawnEvent e) {
+        // Nếu lồng này nằm trong danh sách quản lý của plugin -> Hủy triệu hồi
+        if (manager.getAt(e.getSpawner().getLocation()) != null) {
+            e.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -82,13 +92,12 @@ public class SpawnerListener implements Listener {
 
         Block b = e.getBlock();
         
-        // --- THÊM HÌNH ẢNH CON MOB VÀO KHỐI SPAWNER ---
+        // Gán hình ảnh con mob vào khối
         BlockState state = b.getState();
         if (state instanceof CreatureSpawner spawner) {
             spawner.setSpawnedType(type);
             spawner.update(true, false);
         }
-        // ----------------------------------------------
 
         SpawnerData data = new SpawnerData(b.getLocation(), type, Math.max(1, level), owner, ownerName);
         manager.put(data);
@@ -102,7 +111,6 @@ public class SpawnerListener implements Listener {
         if (b.getType() != Material.SPAWNER) return;
         SpawnerData data = manager.getAt(b.getLocation());
         
-        // Nếu là lồng của plugin
         if (data != null) {
             Player p = e.getPlayer();
             if (!p.getUniqueId().equals(data.owner) && !p.hasPermission("schoolspawner.admin")) {
@@ -119,7 +127,6 @@ public class SpawnerListener implements Listener {
             return;
         }
         
-        // Nếu là spawner mặc định của server (không phải plugin), khi đập sẽ rơi ra lồng level 1 cho người chơi
         BlockState state = b.getState();
         if (state instanceof CreatureSpawner spawner) {
             EntityType type = spawner.getSpawnedType();
@@ -140,7 +147,7 @@ public class SpawnerListener implements Listener {
 
         Player p = e.getPlayer();
         SpawnerData data = manager.getAt(b.getLocation());
-        if (data == null) return; // Nếu là spawner mặc định, không làm gì cả
+        if (data == null) return;
 
         e.setCancelled(true);
         boolean isOwner = p.getUniqueId().equals(data.owner);
