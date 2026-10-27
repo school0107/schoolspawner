@@ -15,7 +15,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.SpawnerSpawnEvent; // Đã sửa lại import chuẩn
+import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -46,7 +46,7 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // CHẶN TRIỆU HỒI QUÁI TỪ LỒNG (Sử dụng SpawnerSpawnEvent chuẩn Bukkit)
+    // CHẶN TRIỆU HỒI QUÁI TỪ LỒNG
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onSpawnerSpawn(SpawnerSpawnEvent e) {
         if (manager.getAt(e.getSpawner().getLocation()) != null) {
@@ -85,6 +85,7 @@ public class SpawnerListener implements Listener {
 
         Player p = e.getPlayer();
         int level = manager.getLevelFromItem(item);
+        // Nếu là lồng mới hoàn toàn (chưa có owner), gán owner là người đặt
         UUID owner = manager.getOwnerFromItem(item);
         String ownerName = manager.getOwnerNameFromItem(item);
         if (owner == null) { owner = p.getUniqueId(); ownerName = p.getName(); }
@@ -112,13 +113,13 @@ public class SpawnerListener implements Listener {
         
         if (data != null) {
             Player p = e.getPlayer();
-            if (!p.getUniqueId().equals(data.owner) && !p.hasPermission("schoolspawner.admin")) {
-                e.setCancelled(true);
-                msg(p, "not-owner");
-                return;
-            }
+            // ĐÃ BỎ KIỂM TRA OWNER: Ai cũng có thể đập lồng
 
+            // Không cho rơi exp
+            e.setExpToDrop(0);
             e.setDropItems(false);
+
+            // Trả lại lồng với tên owner đầu tiên
             ItemStack drop = manager.createSpawnerItem(data.entityType, data.level, data.owner, data.ownerName);
             b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.5, 0.5), drop);
             manager.remove(b.getLocation());
@@ -126,10 +127,12 @@ public class SpawnerListener implements Listener {
             return;
         }
         
+        // Nếu đập lồng mặc định của server
         BlockState state = b.getState();
         if (state instanceof CreatureSpawner spawner) {
             EntityType type = spawner.getSpawnedType();
             if (type != null && type.isAlive() && type.isSpawnable()) {
+                e.setExpToDrop(0);
                 e.setDropItems(false);
                 ItemStack drop = manager.createSpawnerItem(type, 1, e.getPlayer().getUniqueId(), e.getPlayer().getName());
                 b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.5, 0.5), drop);
@@ -149,8 +152,8 @@ public class SpawnerListener implements Listener {
         if (data == null) return;
 
         e.setCancelled(true);
-        boolean isOwner = p.getUniqueId().equals(data.owner);
-        boolean isAdmin = p.hasPermission("schoolspawner.admin");
+        
+        // ĐÃ BỎ KIỂM TRA OWNER: Ai cũng có thể mở GUI và gộp lồng
 
         ItemStack inHand = p.getInventory().getItemInMainHand();
         EntityType handMob = manager.getMobFromItem(inHand);
@@ -158,10 +161,6 @@ public class SpawnerListener implements Listener {
         if (p.isSneaking() && handMob != null && plugin.getConfig().getBoolean("settings.allow-merge", true)) {
             if (handMob != data.entityType) {
                 msg(p, "merge-fail-different");
-                return;
-            }
-            if (!isOwner && !isAdmin) {
-                msg(p, "not-owner");
                 return;
             }
 
@@ -186,10 +185,7 @@ public class SpawnerListener implements Listener {
             return;
         }
 
-        if (plugin.getConfig().getBoolean("settings.owner-only-gui", true) && !isOwner && !isAdmin) {
-            msg(p, "not-owner");
-            return;
-        }
+        // Mở GUI
         plugin.getGui().open(p, data);
     }
 
