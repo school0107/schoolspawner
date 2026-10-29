@@ -24,6 +24,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -62,6 +63,10 @@ public class SpawnerListener implements Listener {
 
         if (entity.hasMetadata("schoolspawner_mob")) return;
 
+        // Kiểm tra Blacklist
+        List<String> blacklist = plugin.getConfig().getStringList("mob-blacklist");
+        if (blacklist.contains(entity.getType().name())) return;
+
         double chance = plugin.getConfig().getDouble("settings.kill-drop-chance", 0.5);
         if (killer.hasPermission("spawnerdrop.4")) chance = 1.0;
         else if (killer.hasPermission("spawnerdrop.3")) chance = 0.9;
@@ -85,7 +90,6 @@ public class SpawnerListener implements Listener {
 
         Player p = e.getPlayer();
         int level = manager.getLevelFromItem(item);
-        // Nếu là lồng mới hoàn toàn (chưa có owner), gán owner là người đặt
         UUID owner = manager.getOwnerFromItem(item);
         String ownerName = manager.getOwnerNameFromItem(item);
         if (owner == null) { owner = p.getUniqueId(); ownerName = p.getName(); }
@@ -113,13 +117,11 @@ public class SpawnerListener implements Listener {
         
         if (data != null) {
             Player p = e.getPlayer();
-            // ĐÃ BỎ KIỂM TRA OWNER: Ai cũng có thể đập lồng
+            // Ai cũng có thể đập lồng, không check owner
 
-            // Không cho rơi exp
-            e.setExpToDrop(0);
+            e.setExpToDrop(0); // Không rơi exp
             e.setDropItems(false);
 
-            // Trả lại lồng với tên owner đầu tiên
             ItemStack drop = manager.createSpawnerItem(data.entityType, data.level, data.owner, data.ownerName);
             b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.5, 0.5), drop);
             manager.remove(b.getLocation());
@@ -153,7 +155,7 @@ public class SpawnerListener implements Listener {
 
         e.setCancelled(true);
         
-        // ĐÃ BỎ KIỂM TRA OWNER: Ai cũng có thể mở GUI và gộp lồng
+        // Ai cũng có thể mở GUI và gộp lồng, không check owner
 
         ItemStack inHand = p.getInventory().getItemInMainHand();
         EntityType handMob = manager.getMobFromItem(inHand);

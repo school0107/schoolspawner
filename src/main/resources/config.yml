@@ -1,10 +1,10 @@
 settings:
   generate-interval: 3
-  max-money-per-spawner: 100000000
+  max-money-per-spawner: 10000000
   allow-merge: true
-  max-level: 100
+  max-level: 1000
   level-multiplier: 1.0
-  owner-only-gui: true
+  owner-only-gui: false
   kill-drop-chance: 0.5
   fallback-money-command: ""
   # Tối ưu: Tự động lưu dữ liệu lồng mỗi X giây (tính bằng giây)
@@ -71,49 +71,97 @@ gui:
     - "&#00FF7F💸 Hiệu suất     &#808080• &#00FF7F+%rate% $&#7F8C8D/3s"
     - "&#7F8C8D────────────────"
 
-mob-prices:
-  ZOMBIE: 3
-  SKELETON: 4
-  SPIDER: 5
-  CREEPER: 8
-  SLIME: 6
-  CAVE_SPIDER: 10
-  ENDERMAN: 15
-  BLAZE: 25
-  WITCH: 20
-  PILLAGER: 18
-  VINDICATOR: 22
-  EVOKER: 40
-  RAVAGER: 60
-  PIGLIN_BRUTE: 45
-  HOGLIN: 50
-  ZOGLIN: 55
-  GUARDIAN: 30
-  ELDER_GUARDIAN: 80
-  SHULKER: 70
-  MAGMA_CUBE: 12
-  PHANTOM: 16
-  HUSK: 3
-  STRAY: 5
-  DROWNED: 4
-  ZOMBIFIED_PIGLIN: 7
-  WITHER_SKELETON: 35
-  GHAST: 28
-  VEX: 25
-  IRON_GOLEM: 100
-  SNOW_GOLEM: 5
-  PIG: 3
-  COW: 3
-  SHEEP: 3
-  CHICKEN: 3
-  RABBIT: 3
-  VILLAGER: 50
-  WITHER: 250
-  ENDER_DRAGON: 300
-  WARDEN: 280
-  BREEZE: 32
-  BOGGED: 14
+mob-blacklist:
+  - SLIVERFISH
+  - PLAYER
+  - ARMOR_STAND
+  - ITEM_FRAME
+  - PAINTING
 
+# Bảng giá mob (Đã bổ sung toàn bộ mob 1.21)
+mob-prices:
+  ALLAY: 15
+  ARMADILLO: 10
+  AXOLOTL: 10
+  BAT: 3
+  BEE: 5
+  BLAZE: 25
+  BOGGED: 14
+  BREEZE: 32
+  CAMEL: 10
+  CAT: 3
+  CAVE_SPIDER: 10
+  CHICKEN: 3
+  COD: 3
+  COW: 3
+  CREEPER: 8
+  DOLPHIN: 10
+  DONKEY: 10
+  DROWNED: 4
+  ELDER_GUARDIAN: 80
+  ENDER_DRAGON: 300
+  ENDERMAN: 5
+  ENDERMITE: 3
+  EVOKER: 40
+  FOX: 5
+  FROG: 5
+  GHAST: 28
+  GLOW_SQUID: 5
+  GOAT: 8
+  GUARDIAN: 30
+  HOGLIN: 50
+  HORSE: 10
+  HUSK: 3
+  ILLUSIONER: 40
+  IRON_GOLEM: 25
+  LLAMA: 10
+  MAGMA_CUBE: 12
+  MOOSHROOM: 10
+  MULE: 10
+  OCELOT: 5
+  PANDA: 10
+  PARROT: 5
+  PHANTOM: 16
+  PIG: 3
+  PIGLIN: 15
+  PIGLIN_BRUTE: 45
+  PILLAGER: 18
+  POLAR_BEAR: 15
+  PUFFERFISH: 3
+  RABBIT: 3
+  RAVAGER: 60
+  SALMON: 3
+  SHEEP: 3
+  SHULKER: 70
+  SKELETON: 4
+  SKELETON_HORSE: 15
+  SLIME: 6
+  SNIFFER: 20
+  SNOW_GOLEM: 5
+  SPIDER: 5
+  SQUID: 3
+  STRAY: 5
+  STRIDER: 10
+  TADPOLE: 3
+  TRADER_LLAMA: 15
+  TROPICAL_FISH: 3
+  TURTLE: 5
+  VEX: 25
+  VILLAGER: 20
+  VINDICATOR: 22
+  WANDERING_TRADER: 30
+  WARDEN: 280
+  WITCH: 20
+  WITHER: 250
+  WITHER_SKELETON: 35
+  WOLF: 5
+  ZOGLIN: 55
+  ZOMBIE: 3
+  ZOMBIE_HORSE: 15
+  ZOMBIE_VILLAGER: 20
+  ZOMBIFIED_PIGLIN: 7
+  ENDER_DRAGON: 1000
+  
 permission-multipliers:
   1: 1.0
   2: 1.2
