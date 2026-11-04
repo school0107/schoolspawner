@@ -75,11 +75,8 @@ public class SpawnerManager {
             if (now - data.lastGenerate < intervalMs) continue;
             data.lastGenerate = now;
 
+            // Chỉ cộng tiền gốc, KHÔNG nhân hệ số của chủ sở hữu
             double money = data.basePrice();
-            Player owner = Bukkit.getPlayer(data.owner);
-            if (owner != null && owner.isOnline()) {
-                money *= getPermissionMultiplier(owner);
-            }
             data.storedMoney = Math.min(maxCap, data.storedMoney + money);
         }
     }
@@ -92,7 +89,6 @@ public class SpawnerManager {
         return plugin.getConfig().getDouble("permission-multipliers." + best, 1.0);
     }
 
-    // Tạo Item Lồng (Dùng khối SPAWNER)
     public ItemStack createSpawnerItem(EntityType type, int level, UUID owner, String ownerName) {
         ItemStack item = new ItemStack(Material.SPAWNER);
         ItemMeta meta = item.getItemMeta();

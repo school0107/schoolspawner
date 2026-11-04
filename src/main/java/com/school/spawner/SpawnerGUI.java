@@ -44,10 +44,15 @@ public class SpawnerGUI {
         ItemMeta mm = money.getItemMeta();
         if (mm != null) {
             mm.displayName(TextUtil.color(cfg.getString("gui.money-name", "&#55FF55💰 NHẬN TIỀN")));
+            
+            // Tính toán số tiền thực nhận (có nhân hệ số của người mở)
+            double multiplier = manager.getPermissionMultiplier(p);
+            double finalMoney = data.storedMoney * multiplier;
+            
             List<Component> moneyLore = new ArrayList<>();
             for (String line : cfg.getStringList("gui.money-lore")) {
                 moneyLore.add(TextUtil.color(line
-                        .replace("%money%", formatMoney(data.storedMoney))
+                        .replace("%money%", formatMoney(finalMoney))
                         .replace("%rate%", formatMoney(data.basePrice()))
                         .replace("%mob%", SpawnerManager.pretty(data.entityType))
                         .replace("%level%", String.valueOf(data.level))));

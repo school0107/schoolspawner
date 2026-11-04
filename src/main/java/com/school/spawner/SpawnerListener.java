@@ -63,7 +63,6 @@ public class SpawnerListener implements Listener {
 
         if (entity.hasMetadata("schoolspawner_mob")) return;
 
-        // Kiểm tra Blacklist
         List<String> blacklist = plugin.getConfig().getStringList("mob-blacklist");
         if (blacklist.contains(entity.getType().name())) return;
 
@@ -96,7 +95,6 @@ public class SpawnerListener implements Listener {
 
         Block b = e.getBlock();
         
-        // Gán hình ảnh con mob vào khối
         BlockState state = b.getState();
         if (state instanceof CreatureSpawner spawner) {
             spawner.setSpawnedType(type);
@@ -117,9 +115,7 @@ public class SpawnerListener implements Listener {
         
         if (data != null) {
             Player p = e.getPlayer();
-            // Ai cũng có thể đập lồng, không check owner
-
-            e.setExpToDrop(0); // Không rơi exp
+            e.setExpToDrop(0);
             e.setDropItems(false);
 
             ItemStack drop = manager.createSpawnerItem(data.entityType, data.level, data.owner, data.ownerName);
@@ -129,7 +125,6 @@ public class SpawnerListener implements Listener {
             return;
         }
         
-        // Nếu đập lồng mặc định của server
         BlockState state = b.getState();
         if (state instanceof CreatureSpawner spawner) {
             EntityType type = spawner.getSpawnedType();
@@ -154,8 +149,6 @@ public class SpawnerListener implements Listener {
         if (data == null) return;
 
         e.setCancelled(true);
-        
-        // Ai cũng có thể mở GUI và gộp lồng, không check owner
 
         ItemStack inHand = p.getInventory().getItemInMainHand();
         EntityType handMob = manager.getMobFromItem(inHand);
@@ -187,7 +180,6 @@ public class SpawnerListener implements Listener {
             return;
         }
 
-        // Mở GUI
         plugin.getGui().open(p, data);
     }
 
@@ -224,21 +216,25 @@ public class SpawnerListener implements Listener {
         if (moneyMat == null) moneyMat = Material.GOLD_INGOT;
 
         if (clicked.getType() == moneyMat) {
-            double money = finalData.storedMoney;
-            if (money <= 0) {
+            double baseMoney = finalData.storedMoney;
+            if (baseMoney <= 0) {
                 msg(p, "no-money");
                 return;
             }
 
+            // Nhân hệ số theo người click
+            double multiplier = manager.getPermissionMultiplier(p);
+            double finalMoney = baseMoney * multiplier;
+
             finalData.storedMoney = 0;
             manager.put(finalData);
-            msg(p, "money-received", "%money%", SpawnerGUI.formatMoney(money), "%mob%", SpawnerManager.pretty(finalData.entityType));
+            msg(p, "money-received", "%money%", SpawnerGUI.formatMoney(finalMoney), "%mob%", SpawnerManager.pretty(finalData.entityType));
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
 
             p.closeInventory();
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                giveMoney(p, money);
+                giveMoney(p, finalMoney);
                 Bukkit.getScheduler().runTask(plugin, () -> plugin.getGui().open(p, finalData));
             });
         }
