@@ -47,7 +47,7 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // Sự kiện sử dụng Bùa (Cả 2 loại)
+    // Sự kiện sử dụng Bùa (Cả 2 loại) - ĐÃ FIX LỖI NULL
     @EventHandler
     public void onCharmUse(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
@@ -59,6 +59,9 @@ public class SpawnerListener implements Listener {
         
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
+        
+        // Kiểm tra xem item có tên hiển thị không (Fix NPE)
+        if (!meta.hasDisplayName()) return;
         
         String itemName = LegacyComponentSerializer.legacySection().serialize(meta.displayName());
         if (itemName == null) return;
