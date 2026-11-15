@@ -2,6 +2,7 @@ package com.school.spawner;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -10,7 +11,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -165,6 +166,9 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                         lore.add(TextUtil.color(line));
                     }
                     meta.lore(lore);
+                    
+                    // Gắn thẻ ẩn
+                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "perm");
                     charm.setItemMeta(meta);
                 }
                 
@@ -209,6 +213,9 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                         lore.add(TextUtil.color(line));
                     }
                     meta.lore(lore);
+
+                    // Gắn thẻ ẩn
+                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "temp");
                     charm.setItemMeta(meta);
                 }
 
