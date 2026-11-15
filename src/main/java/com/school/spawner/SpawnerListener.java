@@ -47,7 +47,56 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // CHẶN TRIỆU HỒI QUÁI TỪ LỒNG
+    // Sự kiện sử dụng Bùa (Cả 2 loại)
+    @EventHandler
+    public void onCharmUse(PlayerInteractEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND) return;
+        if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        
+        Player p = e.getPlayer();
+        ItemStack item = e.getItem();
+        if (item == null || item.getType() == Material.AIR) return;
+        
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return;
+        
+        String itemName = LegacyComponentSerializer.legacySection().serialize(meta.displayName());
+        if (itemName == null) return;
+
+        // Bùa vĩnh viễn
+        if (itemName.contains("BÙA MAY MẮN (VĨNH VIỄN)")) {
+            e.setCancelled(true);
+            if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+            else p.getInventory().setItemInMainHand(null);
+            
+            double bonus = plugin.getConfig().getDouble("lucky-charm.drop-bonus", 0.05);
+            manager.addPlayerDropBonus(p.getUniqueId(), bonus);
+            
+            double total = manager.getPlayerDropBonus(p.getUniqueId()) * 100;
+            p.sendMessage(TextUtil.color("&#55FF55✔ Đã dùng Bùa Vĩnh Viễn! Tổng tỷ lệ rơi lồng: &#FFAA00" + String.format("%.0f", total) + "%"));
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
+            p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
+            return;
+        }
+
+        // Bùa có thời hạn
+        if (itemName.contains("BÙA MAY MẮN (30 PHÚT)")) {
+            e.setCancelled(true);
+            if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+            else p.getInventory().setItemInMainHand(null);
+            
+            double bonus = plugin.getConfig().getDouble("temp-lucky-charm.drop-bonus", 0.10);
+            long durationSec = plugin.getConfig().getLong("temp-lucky-charm.duration-seconds", 1800);
+            long durationMillis = durationSec * 1000;
+            
+            manager.addTempPlayerDropBonus(p.getUniqueId(), bonus, durationMillis);
+            
+            p.sendMessage(TextUtil.color("&#55FF55✔ Đã dùng Bùa Thời Hạn! Tỷ lệ rơi lồng tăng thêm &#FFAA00" + (bonus * 100) + "% &#55FF55trong &#FFAA00" + (durationSec / 60) + " phút."));
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
+            p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onSpawnerSpawn(SpawnerSpawnEvent e) {
         if (manager.getAt(e.getSpawner().getLocation()) != null) {
@@ -71,6 +120,9 @@ public class SpawnerListener implements Listener {
         else if (killer.hasPermission("spawnerdrop.3")) chance = 0.9;
         else if (killer.hasPermission("spawnerdrop.2")) chance = 0.7;
         else if (killer.hasPermission("spawnerdrop.1")) chance = 0.5;
+
+        chance += manager.getPlayerDropBonus(killer.getUniqueId());
+        if (chance > 1.0) chance = 1.0;
 
         if (Math.random() <= chance) {
             EntityType type = entity.getType();
@@ -222,7 +274,6 @@ public class SpawnerListener implements Listener {
                 return;
             }
 
-            // Nhân hệ số theo người click
             double multiplier = manager.getPermissionMultiplier(p);
             double finalMoney = baseMoney * multiplier;
 

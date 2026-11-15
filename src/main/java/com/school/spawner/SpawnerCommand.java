@@ -1,6 +1,7 @@
 package com.school.spawner;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -8,6 +9,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,9 +33,10 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(TextUtil.color(prefix + "&#55FFFF✦ SchoolSpawner &#AAAAAAv" + plugin.getDescription().getVersion()));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss give <player> <mob> [level] &#AAAAAA- Trao lồng"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss giveitem <mob> [level] &#AAAAAA- Tự trao lồng"));
+            sender.sendMessage(TextUtil.color("&#FFFF55/ss givecharm <player> [amount] &#AAAAAA- Trao Bùa Vĩnh Viễn"));
+            sender.sendMessage(TextUtil.color("&#FFFF55/ss givetempcharm <player> [amount] &#AAAAAA- Trao Bùa Thời Hạn"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss reload &#AAAAAA- Reload config"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss list &#AAAAAA- Danh sách mob"));
-            sender.sendMessage(TextUtil.color("&#FFFF55/ss help &#AAAAAA- Trợ giúp"));
             return true;
         }
 
@@ -53,14 +57,6 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     if (t.isAlive() && t.isSpawnable()) names.add(t.name());
                 }
                 sender.sendMessage(TextUtil.color("&#AAAAAA" + String.join(", ", names)));
-                return true;
-            }
-            case "help" -> {
-                sender.sendMessage(TextUtil.color(prefix + "&#55FFFF✦ SchoolSpawner Help ✦"));
-                sender.sendMessage(TextUtil.color("&#FFFF55/ss give <player> <mob> [level]"));
-                sender.sendMessage(TextUtil.color("&#FFFF55/ss giveitem <mob> [level]"));
-                sender.sendMessage(TextUtil.color("&#FFFF55/ss reload"));
-                sender.sendMessage(TextUtil.color("&#FFFF55/ss list"));
                 return true;
             }
             case "give" -> {
@@ -137,6 +133,94 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                 p.sendMessage(TextUtil.color(prefix + "&#55FF55✔ Đã nhận lồng &e" + SpawnerManager.pretty(type) + " &aCấp &e" + level));
                 return true;
             }
+            case "givecharm" -> {
+                if (!sender.hasPermission("schoolspawner.give")) {
+                    sender.sendMessage(TextUtil.color(prefix + "&cNo permission!"));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(TextUtil.color(prefix + "&#FF5555Usage: /ss givecharm <player> [amount]"));
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[1]);
+                if (target == null) {
+                    sender.sendMessage(TextUtil.color(prefix + "&#FF5555Player not found!"));
+                    return true;
+                }
+                int amount = 1;
+                if (args.length >= 3) {
+                    try { amount = Math.max(1, Integer.parseInt(args[2])); } catch (Exception ignored) {}
+                }
+                
+                String charmMatName = plugin.getConfig().getString("lucky-charm.material", "SUNFLOWER");
+                Material mat = Material.matchMaterial(charmMatName);
+                if (mat == null) mat = Material.SUNFLOWER;
+
+                ItemStack charm = new ItemStack(mat, amount);
+                ItemMeta meta = charm.getItemMeta();
+                if (meta != null) {
+                    meta.displayName(TextUtil.color(plugin.getConfig().getString("lucky-charm.name", "&#FFD700🍀 BÙA MAY MẮN")));
+                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                    for (String line : plugin.getConfig().getStringList("lucky-charm.lore")) {
+                        lore.add(TextUtil.color(line));
+                    }
+                    meta.lore(lore);
+                    charm.setItemMeta(meta);
+                }
+                
+                if (target.getInventory().firstEmpty() == -1) {
+                    target.getWorld().dropItemNaturally(target.getLocation(), charm);
+                } else {
+                    target.getInventory().addItem(charm);
+                }
+                sender.sendMessage(TextUtil.color(prefix + "&#55FF55✔ Đã trao &e" + amount + " Bùa Vĩnh Viễn &acho &e" + target.getName()));
+                target.sendMessage(TextUtil.color(prefix + "&#55FF55Bạn đã nhận &e" + amount + " Bùa Vĩnh Viễn!"));
+                return true;
+            }
+            case "givetempcharm" -> {
+                if (!sender.hasPermission("schoolspawner.give")) {
+                    sender.sendMessage(TextUtil.color(prefix + "&cNo permission!"));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(TextUtil.color(prefix + "&#FF5555Usage: /ss givetempcharm <player> [amount]"));
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[1]);
+                if (target == null) {
+                    sender.sendMessage(TextUtil.color(prefix + "&#FF5555Player not found!"));
+                    return true;
+                }
+                int amount = 1;
+                if (args.length >= 3) {
+                    try { amount = Math.max(1, Integer.parseInt(args[2])); } catch (Exception ignored) {}
+                }
+
+                String charmMatName = plugin.getConfig().getString("temp-lucky-charm.material", "CLOCK");
+                Material mat = Material.matchMaterial(charmMatName);
+                if (mat == null) mat = Material.CLOCK;
+
+                ItemStack charm = new ItemStack(mat, amount);
+                ItemMeta meta = charm.getItemMeta();
+                if (meta != null) {
+                    meta.displayName(TextUtil.color(plugin.getConfig().getString("temp-lucky-charm.name", "&#FFAA00⏳ BÙA MAY MẮN")));
+                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                    for (String line : plugin.getConfig().getStringList("temp-lucky-charm.lore")) {
+                        lore.add(TextUtil.color(line));
+                    }
+                    meta.lore(lore);
+                    charm.setItemMeta(meta);
+                }
+
+                if (target.getInventory().firstEmpty() == -1) {
+                    target.getWorld().dropItemNaturally(target.getLocation(), charm);
+                } else {
+                    target.getInventory().addItem(charm);
+                }
+                sender.sendMessage(TextUtil.color(prefix + "&#55FF55✔ Đã trao &e" + amount + " Bùa Thời Hạn &acho &e" + target.getName()));
+                target.sendMessage(TextUtil.color(prefix + "&#55FF55Bạn đã nhận &e" + amount + " Bùa Thời Hạn!"));
+                return true;
+            }
             default -> {
                 sender.sendMessage(TextUtil.color(prefix + "&#FF5555Lệnh không hợp lệ. Dùng /ss help"));
                 return true;
@@ -147,17 +231,17 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return Arrays.asList("give", "giveitem", "reload", "list", "help")
+            return Arrays.asList("give", "giveitem", "givecharm", "givetempcharm", "reload", "list")
                     .stream().filter(s -> s.startsWith(args[0].toLowerCase())).collect(Collectors.toList());
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
+        if (args.length == 2 && (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("givecharm") || args[0].equalsIgnoreCase("givetempcharm"))) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
         }
         if ((args.length == 2 && args[0].equalsIgnoreCase("giveitem"))
                 || (args.length == 3 && args[0].equalsIgnoreCase("give"))) {
             return Arrays.stream(EntityType.values())
                     .filter(EntityType::isAlive)
-                    .map(EntityType::name)
+                    .map(EntityType::getName)
                     .filter(s -> s.startsWith(args[args.length - 1].toUpperCase()))
                     .collect(Collectors.toList());
         }

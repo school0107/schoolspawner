@@ -21,7 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SpawnerManager {
     private final SchoolSpawner plugin;
     private final Map<String, SpawnerData> spawners = new ConcurrentHashMap<>();
+    private final Map<UUID, Double> playerDropBonus = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> playerTempBonusExpiry = new ConcurrentHashMap<>(); // Hết hạn temp bonus
+    private final Map<UUID, Double> playerTempBonusValue = new ConcurrentHashMap<>(); // Giá trị temp bonus
     private final File dataFile;
+    private final File playerDataFile;
     private final NamespacedKey keyMob, keyLevel, keyOwner, keyOwnerName;
     private BukkitTask tickTask;
     private BukkitTask saveTask;
@@ -30,11 +34,13 @@ public class SpawnerManager {
     public SpawnerManager(SchoolSpawner plugin) {
         this.plugin = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "spawners.yml");
+        this.playerDataFile = new File(plugin.getDataFolder(), "playerdata.yml");
         this.keyMob = new NamespacedKey(plugin, "mob");
         this.keyLevel = new NamespacedKey(plugin, "level");
         this.keyOwner = new NamespacedKey(plugin, "owner");
         this.keyOwnerName = new NamespacedKey(plugin, "owner_name");
         loadAll();
+        loadPlayerData();
     }
 
     public NamespacedKey getKeyMob() { return keyMob; }
@@ -54,6 +60,7 @@ public class SpawnerManager {
         saveTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
             if (needsSave) {
                 saveToDisk();
+                savePlayerData();
                 needsSave = false;
             }
         }, saveInterval, saveInterval);
@@ -75,7 +82,6 @@ public class SpawnerManager {
             if (now - data.lastGenerate < intervalMs) continue;
             data.lastGenerate = now;
 
-            // Chỉ cộng tiền gốc, KHÔNG nhân hệ số của chủ sở hữu
             double money = data.basePrice();
             data.storedMoney = Math.min(maxCap, data.storedMoney + money);
         }
@@ -87,6 +93,31 @@ public class SpawnerManager {
             if (p.hasPermission("vspawner." + i)) { best = i; break; }
         }
         return plugin.getConfig().getDouble("permission-multipliers." + best, 1.0);
+    }
+
+    public double getPlayerDropBonus(UUID uuid) {
+        double permBonus = playerDropBonus.getOrDefault(uuid, 0.0);
+        double tempBonus = 0.0;
+        
+        Long expiry = playerTempBonusExpiry.get(uuid);
+        if (expiry != null && System.currentTimeMillis() < expiry) {
+            tempBonus = playerTempBonusValue.getOrDefault(uuid, 0.0);
+        }
+        
+        return permBonus + tempBonus;
+    }
+
+    public void addPlayerDropBonus(UUID uuid, double amount) {
+        double current = playerDropBonus.getOrDefault(uuid, 0.0);
+        playerDropBonus.put(uuid, Math.min(1.0, current + amount));
+        needsSave = true;
+    }
+
+    public void addTempPlayerDropBonus(UUID uuid, double amount, long durationMillis) {
+        long expiry = System.currentTimeMillis() + durationMillis;
+        playerTempBonusExpiry.put(uuid, expiry);
+        playerTempBonusValue.put(uuid, amount);
+        needsSave = true;
     }
 
     public ItemStack createSpawnerItem(EntityType type, int level, UUID owner, String ownerName) {
@@ -223,7 +254,6 @@ public class SpawnerManager {
             d.storedMoney = s.getDouble("money", 0);
             spawners.put(locKey(d.location), d);
 
-            // Cập nhật lại hình ảnh con mob cho block lồng dưới đất sau khi restart server
             if (loc.getBlock().getType() == Material.SPAWNER) {
                 BlockState state = loc.getBlock().getState();
                 if (state instanceof CreatureSpawner spawner) {
@@ -236,10 +266,58 @@ public class SpawnerManager {
         }
     }
 
+    public void savePlayerData() {
+        YamlConfiguration yml = new YamlConfiguration();
+        for (Map.Entry<UUID, Double> entry : playerDropBonus.entrySet()) {
+            yml.set("players.perm." + entry.getKey().toString(), entry.getValue());
+        }
+        for (Map.Entry<UUID, Long> entry : playerTempBonusExpiry.entrySet()) {
+            yml.set("players.temp_expiry." + entry.getKey().toString(), entry.getValue());
+        }
+        for (Map.Entry<UUID, Double> entry : playerTempBonusValue.entrySet()) {
+            yml.set("players.temp_val." + entry.getKey().toString(), entry.getValue());
+        }
+        try {
+            if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdirs();
+            yml.save(playerDataFile);
+        } catch (IOException ex) {
+            plugin.getLogger().warning("Cannot save playerdata.yml: " + ex.getMessage());
+        }
+    }
+
+    public void loadPlayerData() {
+        playerDropBonus.clear();
+        playerTempBonusExpiry.clear();
+        playerTempBonusValue.clear();
+        if (!playerDataFile.exists()) return;
+        YamlConfiguration yml = YamlConfiguration.loadConfiguration(playerDataFile);
+        
+        ConfigurationSection permSec = yml.getConfigurationSection("players.perm");
+        if (permSec != null) {
+            for (String key : permSec.getKeys(false)) {
+                try { playerDropBonus.put(UUID.fromString(key), permSec.getDouble(key)); } catch (Exception ignored) {}
+            }
+        }
+        ConfigurationSection expSec = yml.getConfigurationSection("players.temp_expiry");
+        if (expSec != null) {
+            for (String key : expSec.getKeys(false)) {
+                try { playerTempBonusExpiry.put(UUID.fromString(key), expSec.getLong(key)); } catch (Exception ignored) {}
+            }
+        }
+        ConfigurationSection valSec = yml.getConfigurationSection("players.temp_val");
+        if (valSec != null) {
+            for (String key : valSec.getKeys(false)) {
+                try { playerTempBonusValue.put(UUID.fromString(key), valSec.getDouble(key)); } catch (Exception ignored) {}
+            }
+        }
+    }
+
     public void reload() {
         stopTask();
         saveToDisk();
+        savePlayerData();
         loadAll();
+        loadPlayerData();
         startTask();
     }
 }
