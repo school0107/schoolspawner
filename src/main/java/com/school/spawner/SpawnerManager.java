@@ -24,7 +24,7 @@ public class SpawnerManager {
     private final Map<UUID, Double> playerDropBonus = new ConcurrentHashMap<>();
     private final Map<UUID, Long> playerTempBonusExpiry = new ConcurrentHashMap<>();
     private final Map<UUID, Double> playerTempBonusValue = new ConcurrentHashMap<>();
-    private final Map<UUID, Double> playerCapacityBonus = new ConcurrentHashMap<>(); // Lưu bonus dung lượng
+    private final Map<UUID, Double> playerCapacityBonus = new ConcurrentHashMap<>();
     private final File dataFile;
     private final File playerDataFile;
     private final NamespacedKey keyMob, keyLevel, keyOwner, keyOwnerName;
@@ -83,7 +83,6 @@ public class SpawnerManager {
             if (now - data.lastGenerate < intervalMs) continue;
             data.lastGenerate = now;
 
-            // Tính giới hạn riêng cho từng lồng dựa trên chủ sở hữu
             double maxCap = baseCap;
             if (data.owner != null) {
                 maxCap += playerCapacityBonus.getOrDefault(data.owner, 0.0);
@@ -136,10 +135,18 @@ public class SpawnerManager {
         return playerCapacityBonus.getOrDefault(uuid, 0.0);
     }
 
-    // Thêm bonus dung lượng
+    // Thêm bonus dung lượng (Có giới hạn tối đa)
     public void addPlayerCapacityBonus(UUID uuid, double amount) {
         double current = getPlayerCapacityBonus(uuid);
-        playerCapacityBonus.put(uuid, current + amount);
+        double maxCap = plugin.getConfig().getDouble("capacity-charm.max-capacity-bonus", 500000000); // 500M
+        
+        // Nếu đã đạt giới hạn, không cộng thêm
+        if (current >= maxCap) {
+            return;
+        }
+        
+        double newValue = Math.min(maxCap, current + amount);
+        playerCapacityBonus.put(uuid, newValue);
         needsSave = true;
     }
 

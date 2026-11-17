@@ -100,7 +100,8 @@ capacity-charm:
     - "&8"
     - "&#55FF55▶ Chuột phải để sử dụng!"
   material: "DIAMOND"
-  bonus-capacity: 10000000 # Tăng thêm 10 triệu
+  bonus-capacity: 10000000 # Tăng thêm 10 triệu mỗi bùa
+  max-capacity-bonus: 500000000 # TỐI ĐA 500 TRIỆU (500M)
 
 mob-blacklist:
   - SILVERFISH

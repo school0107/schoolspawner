@@ -65,10 +65,11 @@ public class SpawnerListener implements Listener {
         if (charmType == null) return;
 
         e.setCancelled(true);
-        if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
-        else p.getInventory().setItemInMainHand(null);
-
+        
         if (charmType.equals("perm")) {
+            if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+            else p.getInventory().setItemInMainHand(null);
+            
             double bonus = plugin.getConfig().getDouble("lucky-charm.drop-bonus", 0.05);
             manager.addPlayerDropBonus(p.getUniqueId(), bonus);
             
@@ -78,6 +79,9 @@ public class SpawnerListener implements Listener {
             p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
         } 
         else if (charmType.equals("temp")) {
+            if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+            else p.getInventory().setItemInMainHand(null);
+            
             double bonus = plugin.getConfig().getDouble("temp-lucky-charm.drop-bonus", 0.10);
             long durationSec = plugin.getConfig().getLong("temp-lucky-charm.duration-seconds", 1800);
             long durationMillis = durationSec * 1000;
@@ -90,6 +94,21 @@ public class SpawnerListener implements Listener {
         }
         else if (charmType.equals("capacity")) {
             double bonus = plugin.getConfig().getDouble("capacity-charm.bonus-capacity", 10000000);
+            double maxCap = plugin.getConfig().getDouble("capacity-charm.max-capacity-bonus", 500000000);
+            
+            double currentBonus = manager.getPlayerCapacityBonus(p.getUniqueId());
+            
+            // Kiểm tra giới hạn
+            if (currentBonus >= maxCap) {
+                p.sendMessage(TextUtil.color("&#FF5555✖ Bạn đã đạt giới hạn dung lượng tối đa (" + SpawnerGUI.formatMoney(maxCap) + "$)!"));
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                return; // KHÔNG TRỪ BÙA
+            }
+            
+            // Trừ bùa
+            if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+            else p.getInventory().setItemInMainHand(null);
+            
             manager.addPlayerCapacityBonus(p.getUniqueId(), bonus);
             
             double total = manager.getPlayerCapacityBonus(p.getUniqueId());
