@@ -47,7 +47,7 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // Sự kiện sử dụng Bùa (Cả 2 loại) - Dùng thẻ ẩn PDC, không dùng tên
+    // Sự kiện sử dụng Bùa (Cả 3 loại)
     @EventHandler
     public void onCharmUse(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
@@ -86,6 +86,15 @@ public class SpawnerListener implements Listener {
             
             p.sendMessage(TextUtil.color("&#55FF55✔ Đã dùng Bùa Thời Hạn! Tỷ lệ rơi lồng tăng thêm &#FFAA00" + (bonus * 100) + "% &#55FF55trong &#FFAA00" + (durationSec / 60) + " phút."));
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
+            p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
+        }
+        else if (charmType.equals("capacity")) {
+            double bonus = plugin.getConfig().getDouble("capacity-charm.bonus-capacity", 10000000);
+            manager.addPlayerCapacityBonus(p.getUniqueId(), bonus);
+            
+            double total = manager.getPlayerCapacityBonus(p.getUniqueId());
+            p.sendMessage(TextUtil.color("&#55FF55✔ Đã dùng Bùa Dung Lượng! Tổng giới hạn tăng thêm: &#00E5FF" + SpawnerGUI.formatMoney(total) + "$"));
+            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.5f);
             p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
         }
     }

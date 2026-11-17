@@ -22,8 +22,9 @@ public class SpawnerManager {
     private final SchoolSpawner plugin;
     private final Map<String, SpawnerData> spawners = new ConcurrentHashMap<>();
     private final Map<UUID, Double> playerDropBonus = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> playerTempBonusExpiry = new ConcurrentHashMap<>(); // Hết hạn temp bonus
-    private final Map<UUID, Double> playerTempBonusValue = new ConcurrentHashMap<>(); // Giá trị temp bonus
+    private final Map<UUID, Long> playerTempBonusExpiry = new ConcurrentHashMap<>();
+    private final Map<UUID, Double> playerTempBonusValue = new ConcurrentHashMap<>();
+    private final Map<UUID, Double> playerCapacityBonus = new ConcurrentHashMap<>(); // Lưu bonus dung lượng
     private final File dataFile;
     private final File playerDataFile;
     private final NamespacedKey keyMob, keyLevel, keyOwner, keyOwnerName;
@@ -74,13 +75,19 @@ public class SpawnerManager {
     private void tick() {
         long now = System.currentTimeMillis();
         double intervalMs = Math.max(1, plugin.getConfig().getLong("settings.generate-interval", 3)) * 1000.0;
-        double maxCap = plugin.getConfig().getDouble("settings.max-money-per-spawner", 100_000_000);
+        double baseCap = plugin.getConfig().getDouble("settings.max-money-per-spawner", 100_000_000);
 
         for (SpawnerData data : spawners.values()) {
             if (data.location.getWorld() == null) continue;
             if (!data.location.getWorld().isChunkLoaded(data.location.getBlockX() >> 4, data.location.getBlockZ() >> 4)) continue;
             if (now - data.lastGenerate < intervalMs) continue;
             data.lastGenerate = now;
+
+            // Tính giới hạn riêng cho từng lồng dựa trên chủ sở hữu
+            double maxCap = baseCap;
+            if (data.owner != null) {
+                maxCap += playerCapacityBonus.getOrDefault(data.owner, 0.0);
+            }
 
             double money = data.basePrice();
             data.storedMoney = Math.min(maxCap, data.storedMoney + money);
@@ -98,12 +105,10 @@ public class SpawnerManager {
     public double getPlayerDropBonus(UUID uuid) {
         double permBonus = playerDropBonus.getOrDefault(uuid, 0.0);
         double tempBonus = 0.0;
-        
         Long expiry = playerTempBonusExpiry.get(uuid);
         if (expiry != null && System.currentTimeMillis() < expiry) {
             tempBonus = playerTempBonusValue.getOrDefault(uuid, 0.0);
         }
-        
         return permBonus + tempBonus;
     }
 
@@ -114,9 +119,27 @@ public class SpawnerManager {
     }
 
     public void addTempPlayerDropBonus(UUID uuid, double amount, long durationMillis) {
-        long expiry = System.currentTimeMillis() + durationMillis;
-        playerTempBonusExpiry.put(uuid, expiry);
-        playerTempBonusValue.put(uuid, amount);
+        long now = System.currentTimeMillis();
+        Long currentExpiry = playerTempBonusExpiry.get(uuid);
+        double currentValue = 0.0;
+        if (currentExpiry != null && currentExpiry > now) {
+            currentValue = playerTempBonusValue.getOrDefault(uuid, 0.0);
+        }
+        long newExpiry = (currentExpiry != null && currentExpiry > now) ? currentExpiry + durationMillis : now + durationMillis;
+        playerTempBonusExpiry.put(uuid, newExpiry);
+        playerTempBonusValue.put(uuid, Math.min(1.0, currentValue + amount));
+        needsSave = true;
+    }
+
+    // Lấy bonus dung lượng của người chơi
+    public double getPlayerCapacityBonus(UUID uuid) {
+        return playerCapacityBonus.getOrDefault(uuid, 0.0);
+    }
+
+    // Thêm bonus dung lượng
+    public void addPlayerCapacityBonus(UUID uuid, double amount) {
+        double current = getPlayerCapacityBonus(uuid);
+        playerCapacityBonus.put(uuid, current + amount);
         needsSave = true;
     }
 
@@ -277,6 +300,9 @@ public class SpawnerManager {
         for (Map.Entry<UUID, Double> entry : playerTempBonusValue.entrySet()) {
             yml.set("players.temp_val." + entry.getKey().toString(), entry.getValue());
         }
+        for (Map.Entry<UUID, Double> entry : playerCapacityBonus.entrySet()) {
+            yml.set("players.capacity." + entry.getKey().toString(), entry.getValue());
+        }
         try {
             if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdirs();
             yml.save(playerDataFile);
@@ -289,6 +315,7 @@ public class SpawnerManager {
         playerDropBonus.clear();
         playerTempBonusExpiry.clear();
         playerTempBonusValue.clear();
+        playerCapacityBonus.clear();
         if (!playerDataFile.exists()) return;
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(playerDataFile);
         
@@ -308,6 +335,12 @@ public class SpawnerManager {
         if (valSec != null) {
             for (String key : valSec.getKeys(false)) {
                 try { playerTempBonusValue.put(UUID.fromString(key), valSec.getDouble(key)); } catch (Exception ignored) {}
+            }
+        }
+        ConfigurationSection capSec = yml.getConfigurationSection("players.capacity");
+        if (capSec != null) {
+            for (String key : capSec.getKeys(false)) {
+                try { playerCapacityBonus.put(UUID.fromString(key), capSec.getDouble(key)); } catch (Exception ignored) {}
             }
         }
     }

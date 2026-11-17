@@ -70,9 +70,40 @@ gui:
     - "&#FF70A6👑 Chủ sở hữu    &#808080• &#FFFFFF%owner%"
     - "&#00FF7F💸 Hiệu suất     &#808080• &#00FF7F+%rate% $&#7F8C8D/3s"
     - "&#7F8C8D────────────────"
+lucky-charm:
+  name: "&#FFD700🍀 BÙA MAY MẮN (VĨNH VIỄN)"
+  lore:
+    - "&#AAAAAASử dụng để tăng vĩnh viễn &#55FF555% &#AAAAAAtỷ lệ rơi lồng."
+    - "&#AAAAAA(Tối đa 100%)"
+    - "&8"
+    - "&#55FF55▶ Chuột phải để sử dụng!"
+  material: "CLOCK"
+  drop-bonus: 0.05
+
+# Cấu hình Bùa May Mắn Có Thời Hạn
+temp-lucky-charm:
+  name: "&#FFAA00⏳ BÙA MAY MẮN (15 PHÚT)"
+  lore:
+    - "&#AAAAAASử dụng để tăng &#55FF5590% &#AAAAAAtỷ lệ rơi lồng."
+    - "&#AAAAAAHiệu lực trong &#FFAA0015 phút (có thể cộng dồn)&#AAAAAA."
+    - "&8"
+    - "&#55FF55▶ Chuột phải để sử dụng!"
+  material: "CLOCK"
+  drop-bonus: 0.90
+  duration-seconds: 900 # 15 phút
+# Cấu hình Bùa Gia Tăng Dung Lượng
+capacity-charm:
+  name: "&#00E5FF💎 BÙA GIA TĂNG DUNG LƯỢNG"
+  lore:
+    - "&#AAAAAASử dụng để tăng vĩnh viễn &#00E5FF10,000,000$"
+    - "&#AAAAAAgiới hạn tiền tối đa của lồng bạn sở hữu."
+    - "&8"
+    - "&#55FF55▶ Chuột phải để sử dụng!"
+  material: "DIAMOND"
+  bonus-capacity: 10000000 # Tăng thêm 10 triệu
 
 mob-blacklist:
-  - SLIVERFISH
+  - SILVERFISH
   - PLAYER
   - ARMOR_STAND
   - ITEM_FRAME
