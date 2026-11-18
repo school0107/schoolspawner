@@ -1,5 +1,6 @@
 package com.school.spawner;
 
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
@@ -118,13 +119,12 @@ public class SpawnerManager {
     // --- KIỂM TRA LỊCH GIỜ VÀNG ---
     private void checkSchedule() {
         if (!plugin.getConfig().getBoolean("golden-hour-schedule.enabled", false)) return;
-        if (isEventActive()) return; // Đang diễn ra thì không check nữa
+        if (isEventActive()) return;
 
         LocalDateTime now = LocalDateTime.now();
         int hour = now.getHour();
         int minute = now.getMinute();
 
-        // Chỉ check 1 lần mỗi phút để tránh lag
         if (hour == lastScheduleCheckHour && minute == lastScheduleCheckMinute) return;
         lastScheduleCheckHour = hour;
         lastScheduleCheckMinute = minute;
@@ -177,11 +177,15 @@ public class SpawnerManager {
         
         String timeStr = formatDuration(durationMillis);
         
+        // Chuyển Component sang String để tương thích mọi phiên bản
+        String title = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#FFD700✦ GIỜ VÀNG ✦"));
+        String subtitle = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#55FF55Thu nhập lồng x" + multiplier + " trong " + timeStr));
+        
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendMessage(TextUtil.color("&#FFD700✦ &#FFAA00&lGIỜ VÀNG &#FFD700✦ &fĐÃ BẮT ĐẦU! &#AAAAAA(" + timeStr + ")"));
             p.sendMessage(TextUtil.color("&#55FF55Tất cả lồng sẽ sinh ra gấp &#FFAA00" + multiplier + "x &#55FF55tiền trong thời gian này!"));
             p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1f);
-            p.sendTitle(TextUtil.color("&#FFD700✦ GIỜ VÀNG ✦"), TextUtil.color("&#55FF55Thu nhập lồng x" + multiplier + " trong " + timeStr), 10, 70, 20);
+            p.sendTitle(title, subtitle, 10, 70, 20);
         }
     }
 
