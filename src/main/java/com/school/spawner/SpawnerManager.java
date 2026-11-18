@@ -1,12 +1,10 @@
 package com.school.spawner;
 
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -39,8 +37,8 @@ public class SpawnerManager {
     private long eventEndTime = 0;
     private long eventStartTime = 0;
     private String eventSummoner = null;
-    private BossBar bossBar;
-    private BukkitTask bossBarTask;
+    private BossBar adventureBossBar = null;
+    private BukkitTask bossBarTask = null;
     
     // Biến lịch
     private int lastScheduleCheckMinute = -1;
@@ -91,8 +89,7 @@ public class SpawnerManager {
     public void stopTask() {
         if (tickTask != null) tickTask.cancel();
         if (saveTask != null) saveTask.cancel();
-        if (bossBarTask != null) bossBarTask.cancel();
-        if (bossBar != null) bossBar.removeAll();
+        cleanupBossBar();
     }
 
     private void tick() {
@@ -102,6 +99,11 @@ public class SpawnerManager {
 
         // Kiểm tra lịch Giờ Vàng
         checkSchedule();
+
+        // Kiểm tra tự động kết thúc sự kiện
+        if (isEventActive() && now >= eventEndTime) {
+            stopGoldenHour();
+        }
 
         for (SpawnerData data : spawners.values()) {
             if (data.location.getWorld() == null) continue;
@@ -160,7 +162,6 @@ public class SpawnerManager {
                 long durationMinutes = plugin.getConfig().getLong("golden-hour-schedule.duration-minutes", 30);
                 double multiplier = plugin.getConfig().getDouble("golden-hour-schedule.multiplier", 2.0);
                 
-                // Lịch tự động không có người triệu hồi
                 startGoldenHour(multiplier, durationMinutes * 60 * 1000, null);
             }
         } catch (Exception e) {
@@ -182,6 +183,11 @@ public class SpawnerManager {
     }
 
     public void startGoldenHour(double multiplier, long durationMillis, String summoner) {
+        // Nếu đang có sự kiện cũ, dọn dẹp trước
+        if (isEventActive()) {
+            cleanupBossBar();
+        }
+        
         this.eventMultiplier = multiplier;
         this.eventStartTime = System.currentTimeMillis();
         this.eventEndTime = this.eventStartTime + durationMillis;
@@ -206,7 +212,7 @@ public class SpawnerManager {
             p.sendTitle(title, subtitle, 10, 70, 20);
         }
         
-        // Tạo BossBar
+        // Tạo BossBar mới
         createBossBar(multiplier, summoner);
     }
 
@@ -214,6 +220,9 @@ public class SpawnerManager {
         this.eventMultiplier = 1.0;
         this.eventEndTime = 0;
         this.eventSummoner = null;
+        
+        // Dọn dẹp BossBar ngay lập tức
+        cleanupBossBar();
         
         String title = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#FF5555✦ GIỜ VÀNG KẾT THÚC ✦"));
         String subtitle = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#AAAAAAHẹn gặp lại ở sự kiện tiếp theo!"));
@@ -223,22 +232,10 @@ public class SpawnerManager {
             p.sendTitle(title, subtitle, 10, 70, 20);
             p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, 1f, 1f);
         }
-        
-        // Xóa BossBar
-        if (bossBar != null) {
-            bossBar.removeAll();
-            bossBar = null;
-        }
-        if (bossBarTask != null) {
-            bossBarTask.cancel();
-            bossBarTask = null;
-        }
     }
 
     private void createBossBar(double multiplier, String summoner) {
-        if (bossBar != null) {
-            bossBar.removeAll();
-        }
+        cleanupBossBar();
         
         String titleStr;
         if (summoner != null) {
@@ -247,12 +244,11 @@ public class SpawnerManager {
             titleStr = "&#FFD700✦ GIỜ VÀNG ✦ &#AAAAAA(x" + multiplier + ")";
         }
         
-        // Tạo BossBar sử dụng Adventure Component
-        net.kyori.adventure.bossbar.BossBar adventureBossBar = net.kyori.adventure.bossbar.BossBar.bossBar(
+        adventureBossBar = BossBar.bossBar(
                 TextUtil.color(titleStr),
                 1.0f,
-                net.kyori.adventure.bossbar.BossBar.Color.YELLOW,
-                net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS
+                BossBar.Color.YELLOW,
+                BossBar.Overlay.PROGRESS
         );
         
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -261,7 +257,7 @@ public class SpawnerManager {
         
         bossBarTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (!isEventActive()) {
-                stopGoldenHour();
+                cleanupBossBar();
                 return;
             }
             
@@ -271,26 +267,48 @@ public class SpawnerManager {
             if (progress < 0) progress = 0;
             if (progress > 1) progress = 1;
             
+            // Cập nhật tiêu đề đếm ngược (phút : giây)
+            String timeLeft = formatDuration(remaining);
+            String newTitle;
+            if (summoner != null) {
+                newTitle = "&#FFD700✦ GIỜ VÀNG ✦ &#AAAAAA(x" + multiplier + ") - by " + summoner + " &#55FF55(" + timeLeft + ")";
+            } else {
+                newTitle = "&#FFD700✦ GIỜ VÀNG ✦ &#AAAAAA(x" + multiplier + ") &#55FF55(" + timeLeft + ")";
+            }
+            
+            adventureBossBar.name(TextUtil.color(newTitle));
             adventureBossBar.progress(progress);
             
-            // Cập nhật cho người chơi mới vào
+            // Thêm người chơi mới vào
             for (Player p : Bukkit.getOnlinePlayers()) {
-                if (!p.getScoreboardTags().contains("goldenhour_bossbar")) {
-                    p.showBossBar(adventureBossBar);
-                }
+                p.showBossBar(adventureBossBar);
             }
-        }, 0L, 20L); // Cập nhật mỗi giây
-        
-        this.bossBar = null; // Không dùng BossBar cũ nữa, chỉ dùng Adventure
+        }, 0L, 20L);
+    }
+
+    private void cleanupBossBar() {
+        if (adventureBossBar != null) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                p.hideBossBar(adventureBossBar);
+            }
+            adventureBossBar = null;
+        }
+        if (bossBarTask != null) {
+            bossBarTask.cancel();
+            bossBarTask = null;
+        }
     }
 
     private String formatDuration(long millis) {
         long seconds = millis / 1000;
         long minutes = seconds / 60;
         long hours = minutes / 60;
-        if (hours > 0) return hours + " giờ " + (minutes % 60) + " phút";
-        if (minutes > 0) return minutes + " phút " + (seconds % 60) + " giây";
-        return seconds + " giây";
+        long secs = seconds % 60;
+        
+        if (hours > 0) {
+            return String.format("%02d:%02d:%02d", hours, minutes % 60, secs);
+        }
+        return String.format("%02d:%02d", minutes, secs);
     }
 
     // --- CÁC HÀM KHÁC ---
