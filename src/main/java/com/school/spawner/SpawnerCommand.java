@@ -1,5 +1,6 @@
 package com.school.spawner;
 
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -95,12 +96,12 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                 ItemMeta meta = charm.getItemMeta();
                 if (meta != null) {
                     meta.displayName(TextUtil.color("&#FFD700✦ VẬT PHẨM TRIỆU HỒI GIỜ VÀNG ✦"));
-                    List<String> lore = new ArrayList<>();
+                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
                     lore.add(TextUtil.color("&#AAAAAASử dụng để triệu hồi Giờ Vàng (X2)"));
                     lore.add(TextUtil.color("&#AAAAAAtrong vòng 10 phút."));
                     lore.add(TextUtil.color("&8"));
                     lore.add(TextUtil.color("&#55FF55▶ Chuột phải để sử dụng!"));
-                    meta.lore(lore.stream().map(TextUtil::color).collect(Collectors.toList()));
+                    meta.lore(lore);
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "goldenhour_item");
                     charm.setItemMeta(meta);
                 }
