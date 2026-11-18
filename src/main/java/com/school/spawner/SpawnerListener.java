@@ -47,7 +47,7 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // Sự kiện sử dụng Bùa (Cả 3 loại)
+    // Sự kiện sử dụng item (Bùa + Vật phẩm triệu hồi Giờ Vàng)
     @EventHandler
     public void onCharmUse(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
@@ -98,14 +98,12 @@ public class SpawnerListener implements Listener {
             
             double currentBonus = manager.getPlayerCapacityBonus(p.getUniqueId());
             
-            // Kiểm tra giới hạn
             if (currentBonus >= maxCap) {
                 p.sendMessage(TextUtil.color("&#FF5555✖ Bạn đã đạt giới hạn dung lượng tối đa (" + SpawnerGUI.formatMoney(maxCap) + "$)!"));
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                return; // KHÔNG TRỪ BÙA
+                return;
             }
             
-            // Trừ bùa
             if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
             else p.getInventory().setItemInMainHand(null);
             
@@ -115,6 +113,13 @@ public class SpawnerListener implements Listener {
             p.sendMessage(TextUtil.color("&#55FF55✔ Đã dùng Bùa Dung Lượng! Tổng giới hạn tăng thêm: &#00E5FF" + SpawnerGUI.formatMoney(total) + "$"));
             p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.5f);
             p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
+        }
+        // Vật phẩm triệu hồi Giờ Vàng
+        else if (charmType.equals("goldenhour_item")) {
+            if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
+            else p.getInventory().setItemInMainHand(null);
+            
+            manager.startGoldenHour(2.0, 10 * 60 * 1000, p.getName());
         }
     }
 

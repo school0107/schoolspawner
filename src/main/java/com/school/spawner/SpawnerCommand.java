@@ -37,7 +37,8 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(TextUtil.color("&#FFFF55/ss givecharm <player> [amount] &#AAAAAA- Trao Bùa Vĩnh Viễn"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss givetempcharm <player> [amount] &#AAAAAA- Trao Bùa Thời Hạn"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss givecapcharm <player> [amount] &#AAAAAA- Trao Bùa Dung Lượng"));
-            sender.sendMessage(TextUtil.color("&#FFFF55/ss goldenhour start <time> &#AAAAAA- Bắt đầu Giờ Vàng"));
+            sender.sendMessage(TextUtil.color("&#FFFF55/ss giveeventitem <player> [amount] &#AAAAAA- Trao Vật phẩm Giờ Vàng"));
+            sender.sendMessage(TextUtil.color("&#FFFF55/ss goldenhour start <minutes> &#AAAAAA- Bắt đầu Giờ Vàng"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss goldenhour stop &#AAAAAA- Dừng Giờ Vàng"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss reload &#AAAAAA- Reload config"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss list &#AAAAAA- Danh sách mob"));
@@ -60,14 +61,57 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args[1].equalsIgnoreCase("start")) {
-                    long minutes = 10; // Mặc định 10 phút
+                    long minutes = 10;
                     if (args.length >= 3) {
                         try { minutes = Long.parseLong(args[2]); } catch (NumberFormatException ignored) {}
                     }
-                    plugin.getManager().startGoldenHour(2.0, minutes * 60 * 1000);
+                    String summoner = sender instanceof Player p ? p.getName() : "Server";
+                    plugin.getManager().startGoldenHour(2.0, minutes * 60 * 1000, summoner);
                     sender.sendMessage(TextUtil.color(prefix + "&#55FF55✔ Đã bắt đầu Giờ Vàng trong " + minutes + " phút!"));
                     return true;
                 }
+                return true;
+            }
+            case "giveeventitem" -> {
+                if (!sender.hasPermission("schoolspawner.give")) {
+                    sender.sendMessage(TextUtil.color(prefix + "&cNo permission!"));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(TextUtil.color(prefix + "&#FF5555Usage: /ss giveeventitem <player> [amount]"));
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[1]);
+                if (target == null) {
+                    sender.sendMessage(TextUtil.color(prefix + "&#FF5555Player not found!"));
+                    return true;
+                }
+                int amount = 1;
+                if (args.length >= 3) {
+                    try { amount = Math.max(1, Integer.parseInt(args[2])); } catch (Exception ignored) {}
+                }
+
+                ItemStack charm = new ItemStack(Material.NETHER_STAR, amount);
+                ItemMeta meta = charm.getItemMeta();
+                if (meta != null) {
+                    meta.displayName(TextUtil.color("&#FFD700✦ VẬT PHẨM TRIỆU HỒI GIỜ VÀNG ✦"));
+                    List<String> lore = new ArrayList<>();
+                    lore.add(TextUtil.color("&#AAAAAASử dụng để triệu hồi Giờ Vàng (X2)"));
+                    lore.add(TextUtil.color("&#AAAAAAtrong vòng 10 phút."));
+                    lore.add(TextUtil.color("&8"));
+                    lore.add(TextUtil.color("&#55FF55▶ Chuột phải để sử dụng!"));
+                    meta.lore(lore.stream().map(TextUtil::color).collect(Collectors.toList()));
+                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "goldenhour_item");
+                    charm.setItemMeta(meta);
+                }
+
+                if (target.getInventory().firstEmpty() == -1) {
+                    target.getWorld().dropItemNaturally(target.getLocation(), charm);
+                } else {
+                    target.getInventory().addItem(charm);
+                }
+                sender.sendMessage(TextUtil.color(prefix + "&#55FF55✔ Đã trao &e" + amount + " Vật phẩm Giờ Vàng &acho &e" + target.getName()));
+                target.sendMessage(TextUtil.color(prefix + "&#55FF55Bạn đã nhận &e" + amount + " Vật phẩm Giờ Vàng!"));
                 return true;
             }
             case "reload" -> {
@@ -310,11 +354,12 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return Arrays.asList("give", "giveitem", "givecharm", "givetempcharm", "givecapcharm", "goldenhour", "reload", "list")
+            return Arrays.asList("give", "giveitem", "givecharm", "givetempcharm", "givecapcharm", "giveeventitem", "goldenhour", "reload", "list")
                     .stream().filter(s -> s.startsWith(args[0].toLowerCase())).collect(Collectors.toList());
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("givecharm")
-                || args[0].equalsIgnoreCase("givetempcharm") || args[0].equalsIgnoreCase("givecapcharm"))) {
+                || args[0].equalsIgnoreCase("givetempcharm") || args[0].equalsIgnoreCase("givecapcharm")
+                || args[0].equalsIgnoreCase("giveeventitem"))) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("goldenhour")) {

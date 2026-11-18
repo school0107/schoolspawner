@@ -4,6 +4,9 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -34,6 +37,10 @@ public class SpawnerManager {
     // Biến sự kiện Giờ Vàng
     private double eventMultiplier = 1.0;
     private long eventEndTime = 0;
+    private long eventStartTime = 0;
+    private String eventSummoner = null;
+    private BossBar bossBar;
+    private BukkitTask bossBarTask;
     
     // Biến lịch
     private int lastScheduleCheckMinute = -1;
@@ -84,6 +91,8 @@ public class SpawnerManager {
     public void stopTask() {
         if (tickTask != null) tickTask.cancel();
         if (saveTask != null) saveTask.cancel();
+        if (bossBarTask != null) bossBarTask.cancel();
+        if (bossBar != null) bossBar.removeAll();
     }
 
     private void tick() {
@@ -151,7 +160,8 @@ public class SpawnerManager {
                 long durationMinutes = plugin.getConfig().getLong("golden-hour-schedule.duration-minutes", 30);
                 double multiplier = plugin.getConfig().getDouble("golden-hour-schedule.multiplier", 2.0);
                 
-                startGoldenHour(multiplier, durationMinutes * 60 * 1000);
+                // Lịch tự động không có người triệu hồi
+                startGoldenHour(multiplier, durationMinutes * 60 * 1000, null);
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Invalid golden-hour-schedule start-time format: " + startTimeStr);
@@ -171,31 +181,107 @@ public class SpawnerManager {
         return eventEndTime;
     }
 
-    public void startGoldenHour(double multiplier, long durationMillis) {
+    public void startGoldenHour(double multiplier, long durationMillis, String summoner) {
         this.eventMultiplier = multiplier;
-        this.eventEndTime = System.currentTimeMillis() + durationMillis;
+        this.eventStartTime = System.currentTimeMillis();
+        this.eventEndTime = this.eventStartTime + durationMillis;
+        this.eventSummoner = summoner;
         
         String timeStr = formatDuration(durationMillis);
-        
-        // Chuyển Component sang String để tương thích mọi phiên bản
         String title = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#FFD700✦ GIỜ VÀNG ✦"));
-        String subtitle = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#55FF55Thu nhập lồng x" + multiplier + " trong " + timeStr));
+        String subtitle;
+        if (summoner != null) {
+            subtitle = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#55FF55Thu nhập lồng x" + multiplier + " trong " + timeStr + " &#AAAAAA(bởi " + summoner + ")"));
+        } else {
+            subtitle = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#55FF55Thu nhập lồng x" + multiplier + " trong " + timeStr));
+        }
         
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendMessage(TextUtil.color("&#FFD700✦ &#FFAA00&lGIỜ VÀNG &#FFD700✦ &fĐÃ BẮT ĐẦU! &#AAAAAA(" + timeStr + ")"));
+            if (summoner != null) {
+                p.sendMessage(TextUtil.color("&#55FF55Sự kiện được triệu hồi bởi &#FFAA00" + summoner + "&55FF55!"));
+            }
             p.sendMessage(TextUtil.color("&#55FF55Tất cả lồng sẽ sinh ra gấp &#FFAA00" + multiplier + "x &#55FF55tiền trong thời gian này!"));
             p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1f);
             p.sendTitle(title, subtitle, 10, 70, 20);
         }
+        
+        // Tạo BossBar
+        createBossBar(multiplier, summoner);
     }
 
     public void stopGoldenHour() {
         this.eventMultiplier = 1.0;
         this.eventEndTime = 0;
+        this.eventSummoner = null;
+        
+        String title = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#FF5555✦ GIỜ VÀNG KẾT THÚC ✦"));
+        String subtitle = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#AAAAAAHẹn gặp lại ở sự kiện tiếp theo!"));
         
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendMessage(TextUtil.color("&#FF5555✦ &#FFAA00&lGIỜ VÀNG &#FF5555ĐÃ KẾT THÚC!"));
+            p.sendTitle(title, subtitle, 10, 70, 20);
+            p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, 1f, 1f);
         }
+        
+        // Xóa BossBar
+        if (bossBar != null) {
+            bossBar.removeAll();
+            bossBar = null;
+        }
+        if (bossBarTask != null) {
+            bossBarTask.cancel();
+            bossBarTask = null;
+        }
+    }
+
+    private void createBossBar(double multiplier, String summoner) {
+        if (bossBar != null) {
+            bossBar.removeAll();
+        }
+        
+        String titleStr;
+        if (summoner != null) {
+            titleStr = "&#FFD700✦ GIỜ VÀNG ✦ &#AAAAAA(x" + multiplier + ") - by " + summoner;
+        } else {
+            titleStr = "&#FFD700✦ GIỜ VÀNG ✦ &#AAAAAA(x" + multiplier + ")";
+        }
+        
+        // Tạo BossBar sử dụng Adventure Component
+        net.kyori.adventure.bossbar.BossBar adventureBossBar = net.kyori.adventure.bossbar.BossBar.bossBar(
+                TextUtil.color(titleStr),
+                1.0f,
+                net.kyori.adventure.bossbar.BossBar.Color.YELLOW,
+                net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS
+        );
+        
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.showBossBar(adventureBossBar);
+        }
+        
+        bossBarTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (!isEventActive()) {
+                stopGoldenHour();
+                return;
+            }
+            
+            long remaining = eventEndTime - System.currentTimeMillis();
+            long total = eventEndTime - eventStartTime;
+            float progress = (float) remaining / (float) total;
+            if (progress < 0) progress = 0;
+            if (progress > 1) progress = 1;
+            
+            adventureBossBar.progress(progress);
+            
+            // Cập nhật cho người chơi mới vào
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (!p.getScoreboardTags().contains("goldenhour_bossbar")) {
+                    p.showBossBar(adventureBossBar);
+                }
+            }
+        }, 0L, 20L); // Cập nhật mỗi giây
+        
+        this.bossBar = null; // Không dùng BossBar cũ nữa, chỉ dùng Adventure
     }
 
     private String formatDuration(long millis) {
