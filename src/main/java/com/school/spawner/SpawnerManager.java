@@ -15,6 +15,10 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,6 +33,10 @@ public class SpawnerManager {
     // Biến sự kiện Giờ Vàng
     private double eventMultiplier = 1.0;
     private long eventEndTime = 0;
+    
+    // Biến lịch
+    private int lastScheduleCheckMinute = -1;
+    private int lastScheduleCheckHour = -1;
 
     private final File dataFile;
     private final File playerDataFile;
@@ -82,6 +90,9 @@ public class SpawnerManager {
         double intervalMs = Math.max(1, plugin.getConfig().getLong("settings.generate-interval", 3)) * 1000.0;
         double baseCap = plugin.getConfig().getDouble("settings.max-money-per-spawner", 100_000_000);
 
+        // Kiểm tra lịch Giờ Vàng
+        checkSchedule();
+
         for (SpawnerData data : spawners.values()) {
             if (data.location.getWorld() == null) continue;
             if (!data.location.getWorld().isChunkLoaded(data.location.getBlockX() >> 4, data.location.getBlockZ() >> 4)) continue;
@@ -104,6 +115,49 @@ public class SpawnerManager {
         }
     }
 
+    // --- KIỂM TRA LỊCH GIỜ VÀNG ---
+    private void checkSchedule() {
+        if (!plugin.getConfig().getBoolean("golden-hour-schedule.enabled", false)) return;
+        if (isEventActive()) return; // Đang diễn ra thì không check nữa
+
+        LocalDateTime now = LocalDateTime.now();
+        int hour = now.getHour();
+        int minute = now.getMinute();
+
+        // Chỉ check 1 lần mỗi phút để tránh lag
+        if (hour == lastScheduleCheckHour && minute == lastScheduleCheckMinute) return;
+        lastScheduleCheckHour = hour;
+        lastScheduleCheckMinute = minute;
+
+        List<String> days = plugin.getConfig().getStringList("golden-hour-schedule.days");
+        if (days.isEmpty()) return;
+
+        DayOfWeek currentDay = now.getDayOfWeek();
+        boolean isDayMatch = false;
+        for (String day : days) {
+            try {
+                if (DayOfWeek.valueOf(day.toUpperCase()) == currentDay) {
+                    isDayMatch = true;
+                    break;
+                }
+            } catch (Exception ignored) {}
+        }
+        if (!isDayMatch) return;
+
+        String startTimeStr = plugin.getConfig().getString("golden-hour-schedule.start-time", "20:00");
+        try {
+            LocalTime startTime = LocalTime.parse(startTimeStr, DateTimeFormatter.ofPattern("HH:mm"));
+            if (hour == startTime.getHour() && minute == startTime.getMinute()) {
+                long durationMinutes = plugin.getConfig().getLong("golden-hour-schedule.duration-minutes", 30);
+                double multiplier = plugin.getConfig().getDouble("golden-hour-schedule.multiplier", 2.0);
+                
+                startGoldenHour(multiplier, durationMinutes * 60 * 1000);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Invalid golden-hour-schedule start-time format: " + startTimeStr);
+        }
+    }
+
     // --- CÁC HÀM QUẢN LÝ SỰ KIỆN GIỜ VÀNG ---
     public boolean isEventActive() {
         return System.currentTimeMillis() < eventEndTime;
@@ -123,7 +177,6 @@ public class SpawnerManager {
         
         String timeStr = formatDuration(durationMillis);
         
-        // Sửa lỗi: Dùng sendMessage cho từng người chơi thay vì Bukkit.broadcast
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendMessage(TextUtil.color("&#FFD700✦ &#FFAA00&lGIỜ VÀNG &#FFD700✦ &fĐÃ BẮT ĐẦU! &#AAAAAA(" + timeStr + ")"));
             p.sendMessage(TextUtil.color("&#55FF55Tất cả lồng sẽ sinh ra gấp &#FFAA00" + multiplier + "x &#55FF55tiền trong thời gian này!"));
@@ -136,7 +189,6 @@ public class SpawnerManager {
         this.eventMultiplier = 1.0;
         this.eventEndTime = 0;
         
-        // Sửa lỗi: Dùng sendMessage cho từng người chơi
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendMessage(TextUtil.color("&#FF5555✦ &#FFAA00&lGIỜ VÀNG &#FF5555ĐÃ KẾT THÚC!"));
         }

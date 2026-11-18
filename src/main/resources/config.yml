@@ -102,6 +102,19 @@ capacity-charm:
   material: "DIAMOND"
   bonus-capacity: 10000000 # Tăng thêm 10 triệu mỗi bùa
   max-capacity-bonus: 500000000 # TỐI ĐA 500 TRIỆU (500M)
+# Cấu hình Lịch Giờ Vàng tự động
+golden-hour-schedule:
+  enabled: true
+  # Các ngày trong tuần (MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY)
+  days:
+    - SATURDAY
+    - SUNDAY
+  # Giờ bắt đầu (Định dạng 24h, ví dụ: 20:00, 14:30)
+  start-time: "20:00"
+  # Thời lượng sự kiện (tính bằng phút)
+  duration-minutes: 30
+  # Hệ số nhân tiền (2.0 = x2)
+  multiplier: 2.0
 
 mob-blacklist:
   - SILVERFISH
