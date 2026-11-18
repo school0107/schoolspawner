@@ -122,10 +122,11 @@ public class SpawnerManager {
         this.eventEndTime = System.currentTimeMillis() + durationMillis;
         
         String timeStr = formatDuration(durationMillis);
-        Bukkit.broadcast(TextUtil.color("&#FFD700✦ &#FFAA00&lGIỜ VÀNG &#FFD700✦ &fĐÃ BẮT ĐẦU! &#AAAAAA(" + timeStr + ")"));
-        Bukkit.broadcast(TextUtil.color("&#55FF55Tất cả lồng sẽ sinh ra gấp &#FFAA00" + multiplier + "x &#55FF55tiền trong thời gian này!"));
         
+        // Sửa lỗi: Dùng sendMessage cho từng người chơi thay vì Bukkit.broadcast
         for (Player p : Bukkit.getOnlinePlayers()) {
+            p.sendMessage(TextUtil.color("&#FFD700✦ &#FFAA00&lGIỜ VÀNG &#FFD700✦ &fĐÃ BẮT ĐẦU! &#AAAAAA(" + timeStr + ")"));
+            p.sendMessage(TextUtil.color("&#55FF55Tất cả lồng sẽ sinh ra gấp &#FFAA00" + multiplier + "x &#55FF55tiền trong thời gian này!"));
             p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1f);
             p.sendTitle(TextUtil.color("&#FFD700✦ GIỜ VÀNG ✦"), TextUtil.color("&#55FF55Thu nhập lồng x" + multiplier + " trong " + timeStr), 10, 70, 20);
         }
@@ -134,7 +135,11 @@ public class SpawnerManager {
     public void stopGoldenHour() {
         this.eventMultiplier = 1.0;
         this.eventEndTime = 0;
-        Bukkit.broadcast(TextUtil.color("&#FF5555✦ &#FFAA00&lGIỜ VÀNG &#FF5555ĐÃ KẾT THÚC!"));
+        
+        // Sửa lỗi: Dùng sendMessage cho từng người chơi
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.sendMessage(TextUtil.color("&#FF5555✦ &#FFAA00&lGIỜ VÀNG &#FF5555ĐÃ KẾT THÚC!"));
+        }
     }
 
     private String formatDuration(long millis) {
