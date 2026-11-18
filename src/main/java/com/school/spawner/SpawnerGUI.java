@@ -45,8 +45,11 @@ public class SpawnerGUI {
         if (mm != null) {
             mm.displayName(TextUtil.color(cfg.getString("gui.money-name", "&#55FF55💰 NHẬN TIỀN")));
             
-            // Tính toán số tiền thực nhận (có nhân hệ số của người mở)
             double multiplier = manager.getPermissionMultiplier(p);
+            // Nhân thêm hệ số Giờ Vàng nếu đang diễn ra
+            if (manager.isEventActive()) {
+                multiplier *= manager.getEventMultiplier();
+            }
             double finalMoney = data.storedMoney * multiplier;
             
             List<Component> moneyLore = new ArrayList<>();
@@ -57,6 +60,14 @@ public class SpawnerGUI {
                         .replace("%mob%", SpawnerManager.pretty(data.entityType))
                         .replace("%level%", String.valueOf(data.level))));
             }
+            
+            // Thêm dòng thông báo Giờ Vàng nếu đang diễn ra
+            if (manager.isEventActive()) {
+                moneyLore.add(TextUtil.color("&8"));
+                moneyLore.add(TextUtil.color("&#FFD700✦ GIỜ VÀNG ĐANG DIỄN RA!"));
+                moneyLore.add(TextUtil.color("&#55FF55Thu nhập x" + manager.getEventMultiplier()));
+            }
+            
             mm.lore(moneyLore);
             mm.getPersistentDataContainer().set(locKey, PersistentDataType.STRING, keyStr);
             money.setItemMeta(mm);

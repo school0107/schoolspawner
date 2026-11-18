@@ -37,12 +37,39 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(TextUtil.color("&#FFFF55/ss givecharm <player> [amount] &#AAAAAA- Trao Bùa Vĩnh Viễn"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss givetempcharm <player> [amount] &#AAAAAA- Trao Bùa Thời Hạn"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss givecapcharm <player> [amount] &#AAAAAA- Trao Bùa Dung Lượng"));
+            sender.sendMessage(TextUtil.color("&#FFFF55/ss goldenhour start <time> &#AAAAAA- Bắt đầu Giờ Vàng"));
+            sender.sendMessage(TextUtil.color("&#FFFF55/ss goldenhour stop &#AAAAAA- Dừng Giờ Vàng"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss reload &#AAAAAA- Reload config"));
             sender.sendMessage(TextUtil.color("&#FFFF55/ss list &#AAAAAA- Danh sách mob"));
             return true;
         }
 
         switch (args[0].toLowerCase()) {
+            case "goldenhour" -> {
+                if (!sender.hasPermission("schoolspawner.admin")) {
+                    sender.sendMessage(TextUtil.color(prefix + "&cNo permission!"));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(TextUtil.color(prefix + "&#FF5555Usage: /ss goldenhour <start/stop> [time]"));
+                    return true;
+                }
+                if (args[1].equalsIgnoreCase("stop")) {
+                    plugin.getManager().stopGoldenHour();
+                    sender.sendMessage(TextUtil.color(prefix + "&#55FF55✔ Đã dừng Giờ Vàng!"));
+                    return true;
+                }
+                if (args[1].equalsIgnoreCase("start")) {
+                    long minutes = 10; // Mặc định 10 phút
+                    if (args.length >= 3) {
+                        try { minutes = Long.parseLong(args[2]); } catch (NumberFormatException ignored) {}
+                    }
+                    plugin.getManager().startGoldenHour(2.0, minutes * 60 * 1000);
+                    sender.sendMessage(TextUtil.color(prefix + "&#55FF55✔ Đã bắt đầu Giờ Vàng trong " + minutes + " phút!"));
+                    return true;
+                }
+                return true;
+            }
             case "reload" -> {
                 if (!sender.hasPermission("schoolspawner.reload")) {
                     sender.sendMessage(TextUtil.color(prefix + "&cNo permission!"));
@@ -168,7 +195,6 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     }
                     meta.lore(lore);
                     
-                    // Gắn thẻ ẩn
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "perm");
                     charm.setItemMeta(meta);
                 }
@@ -215,7 +241,6 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     }
                     meta.lore(lore);
 
-                    // Gắn thẻ ẩn
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "temp");
                     charm.setItemMeta(meta);
                 }
@@ -262,7 +287,6 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     }
                     meta.lore(lore);
 
-                    // Gắn thẻ ẩn
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "capacity");
                     charm.setItemMeta(meta);
                 }
@@ -286,12 +310,15 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return Arrays.asList("give", "giveitem", "givecharm", "givetempcharm", "givecapcharm", "reload", "list")
+            return Arrays.asList("give", "giveitem", "givecharm", "givetempcharm", "givecapcharm", "goldenhour", "reload", "list")
                     .stream().filter(s -> s.startsWith(args[0].toLowerCase())).collect(Collectors.toList());
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("givecharm")
                 || args[0].equalsIgnoreCase("givetempcharm") || args[0].equalsIgnoreCase("givecapcharm"))) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("goldenhour")) {
+            return Arrays.asList("start", "stop");
         }
         if ((args.length == 2 && args[0].equalsIgnoreCase("giveitem"))
                 || (args.length == 3 && args[0].equalsIgnoreCase("give"))) {

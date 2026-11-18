@@ -25,6 +25,11 @@ public class SpawnerManager {
     private final Map<UUID, Long> playerTempBonusExpiry = new ConcurrentHashMap<>();
     private final Map<UUID, Double> playerTempBonusValue = new ConcurrentHashMap<>();
     private final Map<UUID, Double> playerCapacityBonus = new ConcurrentHashMap<>();
+    
+    // Biến sự kiện Giờ Vàng
+    private double eventMultiplier = 1.0;
+    private long eventEndTime = 0;
+
     private final File dataFile;
     private final File playerDataFile;
     private final NamespacedKey keyMob, keyLevel, keyOwner, keyOwnerName;
@@ -89,10 +94,59 @@ public class SpawnerManager {
             }
 
             double money = data.basePrice();
+            
+            // Áp dụng hệ số sự kiện Giờ Vàng
+            if (isEventActive()) {
+                money *= getEventMultiplier();
+            }
+            
             data.storedMoney = Math.min(maxCap, data.storedMoney + money);
         }
     }
 
+    // --- CÁC HÀM QUẢN LÝ SỰ KIỆN GIỜ VÀNG ---
+    public boolean isEventActive() {
+        return System.currentTimeMillis() < eventEndTime;
+    }
+
+    public double getEventMultiplier() {
+        return eventMultiplier;
+    }
+
+    public long getEventEndTime() {
+        return eventEndTime;
+    }
+
+    public void startGoldenHour(double multiplier, long durationMillis) {
+        this.eventMultiplier = multiplier;
+        this.eventEndTime = System.currentTimeMillis() + durationMillis;
+        
+        String timeStr = formatDuration(durationMillis);
+        Bukkit.broadcast(TextUtil.color("&#FFD700✦ &#FFAA00&lGIỜ VÀNG &#FFD700✦ &fĐÃ BẮT ĐẦU! &#AAAAAA(" + timeStr + ")"));
+        Bukkit.broadcast(TextUtil.color("&#55FF55Tất cả lồng sẽ sinh ra gấp &#FFAA00" + multiplier + "x &#55FF55tiền trong thời gian này!"));
+        
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1f);
+            p.sendTitle(TextUtil.color("&#FFD700✦ GIỜ VÀNG ✦"), TextUtil.color("&#55FF55Thu nhập lồng x" + multiplier + " trong " + timeStr), 10, 70, 20);
+        }
+    }
+
+    public void stopGoldenHour() {
+        this.eventMultiplier = 1.0;
+        this.eventEndTime = 0;
+        Bukkit.broadcast(TextUtil.color("&#FF5555✦ &#FFAA00&lGIỜ VÀNG &#FF5555ĐÃ KẾT THÚC!"));
+    }
+
+    private String formatDuration(long millis) {
+        long seconds = millis / 1000;
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        if (hours > 0) return hours + " giờ " + (minutes % 60) + " phút";
+        if (minutes > 0) return minutes + " phút " + (seconds % 60) + " giây";
+        return seconds + " giây";
+    }
+
+    // --- CÁC HÀM KHÁC ---
     public double getPermissionMultiplier(Player p) {
         int best = 1;
         for (int i = 10; i >= 1; i--) {
@@ -130,21 +184,14 @@ public class SpawnerManager {
         needsSave = true;
     }
 
-    // Lấy bonus dung lượng của người chơi
     public double getPlayerCapacityBonus(UUID uuid) {
         return playerCapacityBonus.getOrDefault(uuid, 0.0);
     }
 
-    // Thêm bonus dung lượng (Có giới hạn tối đa)
     public void addPlayerCapacityBonus(UUID uuid, double amount) {
         double current = getPlayerCapacityBonus(uuid);
-        double maxCap = plugin.getConfig().getDouble("capacity-charm.max-capacity-bonus", 500000000); // 500M
-        
-        // Nếu đã đạt giới hạn, không cộng thêm
-        if (current >= maxCap) {
-            return;
-        }
-        
+        double maxCap = plugin.getConfig().getDouble("capacity-charm.max-capacity-bonus", 500000000);
+        if (current >= maxCap) return;
         double newValue = Math.min(maxCap, current + amount);
         playerCapacityBonus.put(uuid, newValue);
         needsSave = true;
