@@ -40,7 +40,7 @@ public class SpawnerManager {
     private BossBar adventureBossBar = null;
     private BukkitTask bossBarTask = null;
     
-    // Biến lịch
+    // Biến kiểm tra lịch
     private int lastScheduleCheckMinute = -1;
     private int lastScheduleCheckHour = -1;
 
@@ -97,12 +97,15 @@ public class SpawnerManager {
         double intervalMs = Math.max(1, plugin.getConfig().getLong("settings.generate-interval", 3)) * 1000.0;
         double baseCap = plugin.getConfig().getDouble("settings.max-money-per-spawner", 100_000_000);
 
+        // 1. Kiểm tra lịch tự động
         checkSchedule();
 
+        // 2. Tự động kết thúc sự kiện nếu hết thời gian
         if (isEventActive() && now >= eventEndTime) {
             stopGoldenHour();
         }
 
+        // 3. Sinh tiền cho từng lồng
         for (SpawnerData data : spawners.values()) {
             if (data.location.getWorld() == null) continue;
             if (!data.location.getWorld().isChunkLoaded(data.location.getBlockX() >> 4, data.location.getBlockZ() >> 4)) continue;
@@ -114,14 +117,14 @@ public class SpawnerManager {
                 maxCap += playerCapacityBonus.getOrDefault(data.owner, 0.0);
             }
 
-            // CHỈ CỘNG TIỀN GỐC, KHÔNG NHÂN HỆ SỐ Ở ĐÂY
+            // Sinh tiền gốc, không nhân hệ số sự kiện ở đây
             double money = data.basePrice(); 
             
             data.storedMoney = Math.min(maxCap, data.storedMoney + money);
         }
     }
 
-    // --- KIỂM TRA LỊCH GIỜ VÀNG ---
+    // --- KIỂM TRA LỊCH GIỜ VÀNG TỰ ĐỘNG ---
     private void checkSchedule() {
         if (!plugin.getConfig().getBoolean("golden-hour-schedule.enabled", false)) return;
         if (isEventActive()) return;
@@ -130,6 +133,7 @@ public class SpawnerManager {
         int hour = now.getHour();
         int minute = now.getMinute();
 
+        // Chỉ check 1 lần mỗi phút để tránh lag
         if (hour == lastScheduleCheckHour && minute == lastScheduleCheckMinute) return;
         lastScheduleCheckHour = hour;
         lastScheduleCheckMinute = minute;
@@ -300,7 +304,7 @@ public class SpawnerManager {
         return String.format("%02d:%02d", minutes, secs);
     }
 
-    // --- CÁC HÀM KHÁC ---
+    // --- CÁC HÀM XỬ LÝ BÙA / DUNG LƯỢNG ---
     public double getPermissionMultiplier(Player p) {
         int best = 1;
         for (int i = 10; i >= 1; i--) {
@@ -351,6 +355,7 @@ public class SpawnerManager {
         needsSave = true;
     }
 
+    // --- TẠO VẬT PHẨM LỒNG ---
     public ItemStack createSpawnerItem(EntityType type, int level, UUID owner, String ownerName) {
         ItemStack item = new ItemStack(Material.SPAWNER);
         ItemMeta meta = item.getItemMeta();
@@ -437,6 +442,7 @@ public class SpawnerManager {
 
     public Collection<SpawnerData> all() { return spawners.values(); }
 
+    // --- LƯU / TẢI DỮ LIỆU ---
     public void saveToDisk() {
         YamlConfiguration yml = new YamlConfiguration();
         for (Map.Entry<String, SpawnerData> e : spawners.entrySet()) {
