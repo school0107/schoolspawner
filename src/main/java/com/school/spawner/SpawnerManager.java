@@ -97,10 +97,8 @@ public class SpawnerManager {
         double intervalMs = Math.max(1, plugin.getConfig().getLong("settings.generate-interval", 3)) * 1000.0;
         double baseCap = plugin.getConfig().getDouble("settings.max-money-per-spawner", 100_000_000);
 
-        // Kiểm tra lịch Giờ Vàng
         checkSchedule();
 
-        // Kiểm tra tự động kết thúc sự kiện
         if (isEventActive() && now >= eventEndTime) {
             stopGoldenHour();
         }
@@ -116,12 +114,8 @@ public class SpawnerManager {
                 maxCap += playerCapacityBonus.getOrDefault(data.owner, 0.0);
             }
 
-            double money = data.basePrice();
-            
-            // Áp dụng hệ số sự kiện Giờ Vàng
-            if (isEventActive()) {
-                money *= getEventMultiplier();
-            }
+            // CHỈ CỘNG TIỀN GỐC, KHÔNG NHÂN HỆ SỐ Ở ĐÂY
+            double money = data.basePrice(); 
             
             data.storedMoney = Math.min(maxCap, data.storedMoney + money);
         }
@@ -183,7 +177,6 @@ public class SpawnerManager {
     }
 
     public void startGoldenHour(double multiplier, long durationMillis, String summoner) {
-        // Nếu đang có sự kiện cũ, dọn dẹp trước
         if (isEventActive()) {
             cleanupBossBar();
         }
@@ -212,7 +205,6 @@ public class SpawnerManager {
             p.sendTitle(title, subtitle, 10, 70, 20);
         }
         
-        // Tạo BossBar mới
         createBossBar(multiplier, summoner);
     }
 
@@ -221,7 +213,6 @@ public class SpawnerManager {
         this.eventEndTime = 0;
         this.eventSummoner = null;
         
-        // Dọn dẹp BossBar ngay lập tức
         cleanupBossBar();
         
         String title = LegacyComponentSerializer.legacySection().serialize(TextUtil.color("&#FF5555✦ GIỜ VÀNG KẾT THÚC ✦"));
@@ -267,7 +258,6 @@ public class SpawnerManager {
             if (progress < 0) progress = 0;
             if (progress > 1) progress = 1;
             
-            // Cập nhật tiêu đề đếm ngược (phút : giây)
             String timeLeft = formatDuration(remaining);
             String newTitle;
             if (summoner != null) {
@@ -279,7 +269,6 @@ public class SpawnerManager {
             adventureBossBar.name(TextUtil.color(newTitle));
             adventureBossBar.progress(progress);
             
-            // Thêm người chơi mới vào
             for (Player p : Bukkit.getOnlinePlayers()) {
                 p.showBossBar(adventureBossBar);
             }

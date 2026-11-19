@@ -45,8 +45,8 @@ public class SpawnerGUI {
         if (mm != null) {
             mm.displayName(TextUtil.color(cfg.getString("gui.money-name", "&#55FF55💰 NHẬN TIỀN")));
             
+            // TÍNH TOÁN SỐ TIỀN THỰC NHẬN (Đã bao gồm VIP + Giờ Vàng)
             double multiplier = manager.getPermissionMultiplier(p);
-            // Nhân thêm hệ số Giờ Vàng nếu đang diễn ra
             if (manager.isEventActive()) {
                 multiplier *= manager.getEventMultiplier();
             }
@@ -61,7 +61,6 @@ public class SpawnerGUI {
                         .replace("%level%", String.valueOf(data.level))));
             }
             
-            // Thêm dòng thông báo Giờ Vàng nếu đang diễn ra
             if (manager.isEventActive()) {
                 moneyLore.add(TextUtil.color("&8"));
                 moneyLore.add(TextUtil.color("&#FFD700✦ GIỜ VÀNG ĐANG DIỄN RA!"));
