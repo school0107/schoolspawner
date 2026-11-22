@@ -47,7 +47,6 @@ public class SpawnerListener implements Listener {
         p.sendMessage(TextUtil.color(prefix + m));
     }
 
-    // Sự kiện sử dụng item (Bùa + Vật phẩm triệu hồi Giờ Vàng)
     @EventHandler
     public void onCharmUse(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;
@@ -60,13 +59,13 @@ public class SpawnerListener implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
         
-        NamespacedKey key = new NamespacedKey(plugin, "lucky_charm");
-        String charmType = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
-        if (charmType == null) return;
+        // Đọc CustomModelData thay vì PersistentData
+        if (!meta.hasCustomModelData()) return;
+        int cmd = meta.getCustomModelData();
 
         e.setCancelled(true);
         
-        if (charmType.equals("perm")) {
+        if (cmd == 1001) { // Bùa Vĩnh Viễn
             if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
             else p.getInventory().setItemInMainHand(null);
             
@@ -78,7 +77,7 @@ public class SpawnerListener implements Listener {
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
             p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
         } 
-        else if (charmType.equals("temp")) {
+        else if (cmd == 1002) { // Bùa Thời Hạn
             if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
             else p.getInventory().setItemInMainHand(null);
             
@@ -92,7 +91,7 @@ public class SpawnerListener implements Listener {
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
             p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
         }
-        else if (charmType.equals("capacity")) {
+        else if (cmd == 1003) { // Bùa Dung Lượng
             double bonus = plugin.getConfig().getDouble("capacity-charm.bonus-capacity", 10000000);
             double maxCap = plugin.getConfig().getDouble("capacity-charm.max-capacity-bonus", 500000000);
             
@@ -114,8 +113,7 @@ public class SpawnerListener implements Listener {
             p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.5f);
             p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 1, 0), 30, 0.5, 0.5, 0.5);
         }
-        // Vật phẩm triệu hồi Giờ Vàng
-        else if (charmType.equals("goldenhour_item")) {
+        else if (cmd == 1004) { // Item Triệu hồi Giờ Vàng
             if (item.getAmount() > 1) item.setAmount(item.getAmount() - 1);
             else p.getInventory().setItemInMainHand(null);
             
@@ -301,6 +299,9 @@ public class SpawnerListener implements Listener {
             }
 
             double multiplier = manager.getPermissionMultiplier(p);
+            if (manager.isEventActive()) {
+                multiplier *= manager.getEventMultiplier();
+            }
             double finalMoney = baseMoney * multiplier;
 
             finalData.storedMoney = 0;

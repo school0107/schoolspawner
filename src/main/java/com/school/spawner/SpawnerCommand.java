@@ -3,7 +3,6 @@ package com.school.spawner;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -12,7 +11,6 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -102,7 +100,9 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     lore.add(TextUtil.color("&8"));
                     lore.add(TextUtil.color("&#55FF55▶ Chuột phải để sử dụng!"));
                     meta.lore(lore);
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "goldenhour_item");
+                    
+                    // ĐÁNH DẤU BẰNG CUSTOM MODEL DATA (ID 1004)
+                    meta.setCustomModelData(1004);
                     charm.setItemMeta(meta);
                 }
 
@@ -240,7 +240,8 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     }
                     meta.lore(lore);
                     
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "perm");
+                    // ĐÁNH DẤU BẰNG CUSTOM MODEL DATA (ID 1001)
+                    meta.setCustomModelData(1001);
                     charm.setItemMeta(meta);
                 }
                 
@@ -286,7 +287,8 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     }
                     meta.lore(lore);
 
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "temp");
+                    // ĐÁNH DẤU BẰNG CUSTOM MODEL DATA (ID 1002)
+                    meta.setCustomModelData(1002);
                     charm.setItemMeta(meta);
                 }
 
@@ -332,7 +334,8 @@ public class SpawnerCommand implements CommandExecutor, TabCompleter {
                     }
                     meta.lore(lore);
 
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "lucky_charm"), PersistentDataType.STRING, "capacity");
+                    // ĐÁNH DẤU BẰNG CUSTOM MODEL DATA (ID 1003)
+                    meta.setCustomModelData(1003);
                     charm.setItemMeta(meta);
                 }
 
